@@ -1,0 +1,57 @@
+# XcodeGen spec. Generate the Xcode project with:  xcodegen generate
+name: StormRadio
+options:
+  bundleIdPrefix: com.stormradio
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  StormRadioCore:
+    path: Packages/StormRadioCore
+targets:
+  StormRadio:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: StormRadioCore
+        product: StormRadioCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Storm Radio
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: ""
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIBackgroundModes: [audio, location, fetch]
+        NSLocationWhenInUseUsageDescription: Storm Radio uses your location to announce warnings, storm reports and storms headed your way.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Storm Radio keeps tracking your location in the background so it can tell you when you drive into a warning or a storm is headed your way.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.stormradio.app
+        PRODUCT_NAME: StormRadio
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""

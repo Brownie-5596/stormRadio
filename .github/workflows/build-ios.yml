@@ -1,0 +1,82 @@
+name: Build iOS app
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore: ["**.md", "docs/**", "tools/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode
+        run: |
+          ls /Applications | grep -i xcode || true
+          xcodebuild -version
+          swift --version
+
+      - name: Core unit tests
+        working-directory: Packages/StormRadioCore
+        run: swift test 2>&1 | tail -40
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned, for sideloading)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project StormRadio.xcodeproj \
+            -scheme StormRadio \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee xcodebuild.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)|\*\* " || true
+          grep -q "BUILD SUCCEEDED" xcodebuild.log
+
+      - name: Show compile errors
+        if: failure()
+        run: grep -n -B2 -A6 "error:" xcodebuild.log | head -300 || true
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/StormRadio.app Payload/
+          zip -qry StormRadio.ipa Payload
+          ls -la StormRadio.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StormRadio-ipa
+          path: StormRadio.ipa
+          retention-days: 30
+
+      - name: Publish to "latest-build" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="latest-${GITHUB_REF_NAME//\//-}"
+          NOTES="Automatic build of ${GITHUB_REF_NAME} at ${GITHUB_SHA::7}. Download StormRadio.ipa and install it with Sideloadly."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" StormRadio.ipa --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" StormRadio.ipa --prerelease --title "Storm Radio build (${GITHUB_REF_NAME})" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
