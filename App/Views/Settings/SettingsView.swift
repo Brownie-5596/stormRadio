@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 import StormRadioCore
 
@@ -181,6 +182,7 @@ struct ImportExportView: View {
     @State private var importMode = ImportMode.replace
     @State private var message: String?
     @State private var pending: AppSettings?
+    @State private var pasted: AppSettings?
 
     enum ImportMode { case replace, addProfiles }
 
@@ -192,15 +194,22 @@ struct ImportExportView: View {
                     ShareLink(item: url) { Label("Share settings file (AirDrop, Messages, Files…)", systemImage: "square.and.arrow.up") }
                 }
                 Button { showExporter = true } label: { Label("Save settings to Files / iCloud Drive", systemImage: "folder") }
+                Button {
+                    if let data = try? SettingsIO.encode(model.settings) {
+                        UIPasteboard.general.string = String(decoding: data, as: UTF8.self)
+                        message = "Settings copied to the clipboard."
+                    }
+                } label: { Label("Copy settings to clipboard", systemImage: "doc.on.doc") }
             } header: {
                 Text("Export")
             } footer: {
-                Text("The file has every profile and setting. AirDrop it between your iPhone and iPad, or edit it on a computer with the Storm Radio settings editor (tools/settings-editor.html in the project) and import it back.")
+                Text("The file has every profile and setting. AirDrop it between your iPhone and iPad, or edit it in the Storm Radio settings editor web page and import it back (or copy there and use Import from clipboard here).")
             }
 
             Section {
                 Button { importMode = .replace; showImporter = true } label: { Label("Import and replace all settings", systemImage: "square.and.arrow.down") }
                 Button { importMode = .addProfiles; showImporter = true } label: { Label("Import profiles (keep mine)", systemImage: "plus.square.on.square") }
+                Button { pasteFromClipboard() } label: { Label("Import from clipboard", systemImage: "doc.on.clipboard") }
             } header: {
                 Text("Import")
             } footer: {
@@ -226,11 +235,36 @@ struct ImportExportView: View {
             case .success(let url): importFile(url)
             }
         }
+        .confirmationDialog("Use the copied settings?", isPresented: Binding(get: { pasted != nil }, set: { if !$0 { pasted = nil } }), titleVisibility: .visible) {
+            Button("Replace all settings", role: .destructive) {
+                if let p = pasted { model.replaceSettings(p); message = "Settings replaced (\(p.profiles.count) profiles)." }
+                pasted = nil
+            }
+            Button("Add / update profiles only") {
+                if let p = pasted {
+                    model.replaceSettings(SettingsIO.mergeProfiles(from: p, into: model.settings))
+                    message = "Added/updated \(p.profiles.count) profile(s)."
+                }
+                pasted = nil
+            }
+        }
         .confirmationDialog("Replace all settings?", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } }), titleVisibility: .visible) {
             Button("Replace", role: .destructive) {
                 if let p = pending { model.replaceSettings(p); message = "Settings replaced (\(p.profiles.count) profiles)." }
                 pending = nil
             }
+        }
+    }
+
+    private func pasteFromClipboard() {
+        guard let text = UIPasteboard.general.string, !text.isEmpty else {
+            message = "The clipboard is empty. Press \"Copy settings\" in the settings editor first."
+            return
+        }
+        do {
+            pasted = try SettingsIO.decode(Data(text.utf8))
+        } catch {
+            message = error.localizedDescription
         }
     }
 

@@ -70,9 +70,10 @@ something **changes**.
 ## Moving settings between devices / editing on a computer
 
 - **Phone ↔ iPad:** Settings → Import / export → *Share settings file* → AirDrop → on the other device, save it to Files and use *Import*.
-- **On a computer:** open [`tools/settings-editor.html`](tools/settings-editor.html) in any browser (download the file and double-click it).
-  Load your exported file (or start from defaults), change anything (every profile, rule table, building blocks…),
-  click *Download settings.json*, then import it in the app. Everything stays in your browser.
+- **On a computer (or iPad browser):** open [`tools/settings-editor.html`](tools/settings-editor.html) in any browser (download the file and double-click it).
+  It opens with the default settings; load your exported file to edit yours. Change anything (every profile, rule table, building blocks…),
+  then *Save settings file* and import it in the app. Everything stays in your browser.
+- **Same device:** in the editor press *Copy settings*, then in the app use *Import from clipboard* (works with Universal Clipboard from a Mac too).
 - The app also keeps `settings.json` in **Files → On My iPhone → Storm Radio**.
 
 Older settings files keep working: anything missing is filled in with defaults.
