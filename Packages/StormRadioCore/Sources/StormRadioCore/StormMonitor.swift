@@ -25,13 +25,13 @@ public struct ActiveAlertInfo: Identifiable, Sendable {
 
 /// The brain of the radio: polls the data sources, tracks what changed and decides what to announce.
 ///
-/// Not thread-safe: call it from one task/actor at a time (the app uses the main actor).
-public final class StormMonitor {
+/// An actor, so polling, location updates and on-demand reads can safely overlap.
+public actor StormMonitor {
     public private(set) var settings: AppSettings
     public var profile: Profile { settings.activeProfile }
     public let client: WeatherClient
     public let tracker = AlertTracker()
-    public var timeZone: TimeZone = .current
+    public private(set) var timeZone: TimeZone = .current
 
     public private(set) var gpsPoint: GeoPoint?
     public private(set) var pointInfo: PointInfo?
@@ -42,7 +42,7 @@ public final class StormMonitor {
     public private(set) var afds: [String: AreaForecastDiscussion] = [:]
     public private(set) var status: [String: SourceStatus] = [:]
     /// Zone/county outlines keyed by API URL. The app can persist this between launches.
-    public var zoneCache: [String: GeoShape] = [:]
+    public private(set) var zoneCache: [String: GeoShape] = [:]
 
     var outlookLayers: [Int: [String: OutlookLayer]] = [:]
     var seenReports: Set<String> = []
@@ -62,6 +62,15 @@ public final class StormMonitor {
     }
 
     // MARK: Settings & location
+
+    public func setTimeZone(_ tz: TimeZone) { timeZone = tz }
+
+    public func setZoneCache(_ cache: [String: GeoShape]) { zoneCache.merge(cache) { a, _ in a } }
+
+    public var activeEventCount: Int { tracker.activeEvents.count }
+
+    /// Speak a startup summary on the next alert poll (e.g. when monitoring is switched on).
+    public func requestStartupSummary() { needsStartupSummary = true }
 
     /// Apply new settings. Alert state is re-baselined quietly so a settings change doesn't cause a burst of speech.
     public func apply(settings new: AppSettings) {
@@ -225,8 +234,9 @@ public final class StormMonitor {
         var text = phraser.compose(a, ctx)
         if let p = prefix { text = "\(p) \(text)" }
         if showPath, let eta = path?.etaMinutes {
+            let leads = profile.path.leadTimesMinutes
             tracker.update(key) { e in
-                for t in self.profile.path.leadTimesMinutes where Double(t) >= eta { e.pathThresholdsFired.insert(t) }
+                for t in leads where Double(t) >= eta { e.pathThresholdsFired.insert(t) }
             }
         }
         return makeAlertAnnouncement(verb == .issued ? .warning : (verb == .updated ? .update : .warning), key: key, alert: a, text: text, now: now)

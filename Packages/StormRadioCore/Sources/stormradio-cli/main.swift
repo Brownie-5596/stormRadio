@@ -72,16 +72,18 @@ case "simulate":
         }
         printAnnouncements(out)
         if first {
-            print("\n--- Active alerts tracked: \(monitor.tracker.activeEvents.count)")
-            for info in monitor.activeAlertInfos().prefix(15) {
+            print("\n--- Active alerts tracked: \(await monitor.activeEventCount)")
+            for info in await monitor.activeAlertInfos().prefix(15) {
                 print("  \(info.inRange ? "*" : " ") \(info.title)  risk \(info.risk)\(info.path.map { " IN PATH eta \(Int($0.etaMinutes ?? 0))m" } ?? "")")
             }
             print("\n--- Sources")
-            for (k, s) in monitor.status.sorted(by: { $0.key < $1.key }) {
+            for (k, s) in await monitor.status.sorted(by: { $0.key < $1.key }) {
                 print("  \(k): \(s.ok ? "ok" : "ERROR \(s.lastError ?? "")") (\(s.itemCount))")
             }
             print("\n--- On-demand buttons")
-            printAnnouncements([monitor.nearbySummary(), monitor.mdAnnouncement(), monitor.outlookAnnouncement(day: 1), monitor.afdAnnouncement(), monitor.reportsSummary()])
+            let buttons = [await monitor.nearbySummary(), await monitor.mdAnnouncement(), await monitor.outlookAnnouncement(day: 1),
+                           await monitor.afdAnnouncement(), await monitor.reportsSummary()]
+            printAnnouncements(buttons)
             first = false
         }
         if Date() < end { try await Task.sleep(nanoseconds: UInt64(settings.general.alertPollSeconds) * 1_000_000_000) }
@@ -116,7 +118,7 @@ case "replay":
         let alerts = try NWSAlertParser.parseCollection(try Data(contentsOf: URL(fileURLWithPath: file)))
         let now = alerts.compactMap { $0.sent }.max() ?? Date()
         print("== \(file) (\(alerts.count) alerts)")
-        printAnnouncements(monitor.process(alerts: alerts, now: now.addingTimeInterval(60)))
+        printAnnouncements(await monitor.process(alerts: alerts, now: now.addingTimeInterval(60)))
     }
 
 default:

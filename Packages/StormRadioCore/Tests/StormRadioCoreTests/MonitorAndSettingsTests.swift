@@ -2,7 +2,7 @@ import XCTest
 @testable import StormRadioCore
 
 final class MonitorAndSettingsTests: XCTestCase {
-    func monitor(at p: GeoPoint, mode: LocationMode = .fixed) -> StormMonitor {
+    func monitor(at p: GeoPoint, mode: LocationMode = .fixed) async -> StormMonitor {
         var s = AppSettings.defaults
         var prof = s.activeProfile
         prof.location.mode = mode
@@ -10,20 +10,21 @@ final class MonitorAndSettingsTests: XCTestCase {
         prof.startupSummary = false
         s.activeProfile = prof
         let m = StormMonitor(settings: s)
-        m.timeZone = TimeZone(identifier: "UTC")!
-        if mode == .gps { _ = m.updateLocation(p, now: Date()) }
+        await m.setTimeZone(TimeZone(identifier: "UTC")!)
+        if mode == .gps { _ = await m.updateLocation(p, now: Date()) }
         return m
     }
 
-    func testIssueUpdateCancelFlow() {
+    func testIssueUpdateCancelFlow() async {
         let now = date("2026-05-06T23:40:00Z")
-        let m = monitor(at: GeoPoint(lat: 35.2, lon: -97.5)) // ~6 miles west of the test polygon
-        XCTAssertTrue(m.process(alerts: [], now: now).isEmpty)
+        let m = await monitor(at: GeoPoint(lat: 35.2, lon: -97.5)) // ~6 miles west of the test polygon
+        let initial = await m.process(alerts: [], now: now)
+        XCTAssertTrue(initial.isEmpty)
 
         var a = makeAlert(sent: now)
         a.maxWindMPH = 60
         a.windBasis = .radarIndicated
-        let issued = m.process(alerts: [a], now: now.addingTimeInterval(20))
+        let issued = await m.process(alerts: [a], now: now.addingTimeInterval(20))
         XCTAssertEqual(issued.count, 1)
         XCTAssertEqual(issued[0].category, .warning)
         XCTAssertTrue(issued[0].spokenText.hasPrefix("A severe thunderstorm warning was issued 6 miles to the east."), issued[0].spokenText)
@@ -37,7 +38,7 @@ final class MonitorAndSettingsTests: XCTestCase {
         u.sent = now.addingTimeInterval(600)
         u.maxHailInches = 1.75
         u.hailBasis = .observed
-        let upd = m.process(alerts: [u], now: now.addingTimeInterval(620))
+        let upd = await m.process(alerts: [u], now: now.addingTimeInterval(620))
         XCTAssertEqual(upd.count, 1)
         XCTAssertTrue(upd[0].spokenText.hasPrefix("Upgraded."), upd[0].spokenText)
         XCTAssertTrue(upd[0].spokenText.contains("golf ball size hail was observed"), upd[0].spokenText)
@@ -49,52 +50,56 @@ final class MonitorAndSettingsTests: XCTestCase {
         c.messageType = "Cancel"
         c.sent = now.addingTimeInterval(1200)
         c.description = "The storm which prompted the warning has weakened below severe limits, and no longer poses an immediate threat to life or property.\n\n"
-        let can = m.process(alerts: [c], now: now.addingTimeInterval(1220))
+        let can = await m.process(alerts: [c], now: now.addingTimeInterval(1220))
         XCTAssertEqual(can.count, 1)
         XCTAssertEqual(can[0].spokenText, "The severe thunderstorm warning 6 miles east has been cancelled. The storm which prompted the warning has weakened below severe limits, and no longer poses an immediate threat to life or property.")
         XCTAssertFalse(can[0].canInterrupt)
     }
 
-    func testOutOfRangeIsSilentButTracked() {
+    func testOutOfRangeIsSilentButTracked() async {
         let now = date("2026-05-06T23:40:00Z")
-        let m = monitor(at: GeoPoint(lat: 36.5, lon: -97.3)) // ~85 miles north
-        _ = m.process(alerts: [], now: now)
-        let out = m.process(alerts: [makeAlert(sent: now)], now: now.addingTimeInterval(10))
+        let m = await monitor(at: GeoPoint(lat: 36.5, lon: -97.3)) // ~85 miles north
+        _ = await m.process(alerts: [], now: now)
+        let out = await m.process(alerts: [makeAlert(sent: now)], now: now.addingTimeInterval(10))
         XCTAssertTrue(out.isEmpty)
-        XCTAssertEqual(m.tracker.activeEvents.count, 1)
-        XCTAssertFalse(m.activeAlertInfos(now: now).first!.inRange)
+        let count = await m.activeEventCount
+        XCTAssertEqual(count, 1)
+        let infos = await m.activeAlertInfos(now: now)
+        XCTAssertFalse(infos.first!.inRange)
     }
 
-    func testEnteredAndLeftWarningWithGPS() {
+    func testEnteredAndLeftWarningWithGPS() async {
         let now = date("2026-05-06T23:40:00Z")
-        let m = monitor(at: GeoPoint(lat: 35.2, lon: -97.6), mode: .gps)
-        _ = m.process(alerts: [], now: now)
-        _ = m.process(alerts: [makeAlert(sent: now)], now: now.addingTimeInterval(10))
-        let entered = m.updateLocation(GeoPoint(lat: 35.2, lon: -97.3), now: now.addingTimeInterval(300))
+        let m = await monitor(at: GeoPoint(lat: 35.2, lon: -97.6), mode: .gps)
+        _ = await m.process(alerts: [], now: now)
+        _ = await m.process(alerts: [makeAlert(sent: now)], now: now.addingTimeInterval(10))
+        let entered = await m.updateLocation(GeoPoint(lat: 35.2, lon: -97.3), now: now.addingTimeInterval(300))
         XCTAssertEqual(entered.count, 1)
         XCTAssertEqual(entered[0].category, .location)
         XCTAssertTrue(entered[0].spokenText.hasPrefix("You have entered a severe thunderstorm warning."), entered[0].spokenText)
-        XCTAssertTrue(m.updateLocation(GeoPoint(lat: 35.21, lon: -97.31), now: now.addingTimeInterval(320)).isEmpty)
-        let left = m.updateLocation(GeoPoint(lat: 35.2, lon: -97.1), now: now.addingTimeInterval(900))
+        let still = await m.updateLocation(GeoPoint(lat: 35.21, lon: -97.31), now: now.addingTimeInterval(320))
+        XCTAssertTrue(still.isEmpty)
+        let left = await m.updateLocation(GeoPoint(lat: 35.2, lon: -97.1), now: now.addingTimeInterval(900))
         XCTAssertEqual(left.first?.spokenText, "You have left the severe thunderstorm warning.")
     }
 
-    func testPathAlertFiresOncePerThreshold() {
+    func testPathAlertFiresOncePerThreshold() async {
         let now = date("2026-05-06T23:40:00Z")
         let user = GeoPoint(lat: 35.2, lon: -97.0) // east of the polygon
-        let m = monitor(at: user)
-        _ = m.process(alerts: [], now: now)
+        let m = await monitor(at: user)
+        _ = await m.process(alerts: [], now: now)
         var a = makeAlert(event: "Tornado Warning", sent: now)
         a.tornadoDetection = .radarIndicated
         let stormPos = Geo.destination(from: user, bearingDegrees: 270, miles: 18)
         a.motion = StormMotion(time: now, fromDegrees: 270, speedKnots: 39, points: [stormPos]) // 45 mph -> 24 min
-        let first = m.process(alerts: [a], now: now.addingTimeInterval(5))
+        let first = await m.process(alerts: [a], now: now.addingTimeInterval(5))
         XCTAssertEqual(first.count, 1)
         XCTAssertTrue(first[0].spokenText.contains("You are in the path"), first[0].spokenText)
         // Same poll again a minute later: the 30-minute threshold already fired with the issuance.
-        XCTAssertTrue(m.process(alerts: [a], now: now.addingTimeInterval(65)).filter { $0.category == .path }.isEmpty)
+        let again = await m.process(alerts: [a], now: now.addingTimeInterval(65))
+        XCTAssertTrue(again.filter { $0.category == .path }.isEmpty)
         // 10 minutes later (ETA ~14 min) the 15-minute threshold fires.
-        let later = m.process(alerts: [a], now: now.addingTimeInterval(600))
+        let later = await m.process(alerts: [a], now: now.addingTimeInterval(600))
         XCTAssertEqual(later.filter { $0.category == .path }.count, 1, "\(later.map { $0.spokenText })")
     }
 

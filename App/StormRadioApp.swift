@@ -3,9 +3,34 @@ import StormRadioCore
 
 @main
 struct StormRadioApp: App {
+    @StateObject private var model = AppModel()
+
     var body: some Scene {
         WindowGroup {
-            Text("Storm Radio \(AppSettings.defaults.profiles.count) profiles")
+            ContentView()
+                .environmentObject(model)
+                .onAppear { NotificationService.shared.requestPermission() }
+        }
+    }
+}
+
+struct ContentView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        TabView(selection: $model.selectedTab) {
+            RadioView()
+                .tabItem { Label("Radio", systemImage: "dot.radiowaves.left.and.right") }
+                .tag(AppModel.Tab.radio)
+            FeedView()
+                .tabItem { Label("Feed", systemImage: "list.bullet.rectangle") }
+                .tag(AppModel.Tab.feed)
+            MapScreen()
+                .tabItem { Label("Map", systemImage: "map") }
+                .tag(AppModel.Tab.map)
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
+                .tag(AppModel.Tab.settings)
         }
     }
 }
