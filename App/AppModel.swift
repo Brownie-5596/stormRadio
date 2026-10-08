@@ -124,6 +124,7 @@ final class AppModel: ObservableObject {
         location.start(precise: profile.location.mode == .gps)
         applyLocalSettings()
         lastPoll = [:]
+        monitorStart = Date()
         Task { [monitor] in await monitor.requestStartupSummary() }
         loopTask?.cancel()
         loopTask = Task { [weak self] in
@@ -148,6 +149,7 @@ final class AppModel: ObservableObject {
         return now.timeIntervalSince(last) >= Double(max(10, seconds))
     }
 
+    private var monitorStart = Date()
     private var lastSnapshot = Date.distantPast
     private var lastZoneSave = Date()
 
@@ -155,6 +157,11 @@ final class AppModel: ObservableObject {
         let now = Date()
         let g = settings.general
         var didWork = false
+        // In GPS mode give the first fix a few seconds so the startup summary is about where you are.
+        if profile.location.mode == .gps, profile.location.fixedPoint == nil, location.location == nil,
+           pendingLocation == nil, now.timeIntervalSince(monitorStart) < 15 {
+            return
+        }
         if let loc = pendingLocation {
             pendingLocation = nil
             let p = GeoPoint(lat: loc.coordinate.latitude, lon: loc.coordinate.longitude)
