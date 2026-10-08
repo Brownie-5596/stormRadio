@@ -1,0 +1,9 @@
+Refresh: 1
+Threshold: 999
+Title: Spotter Network (96dpi) - Reports Only
+Font: 1, 11, 0, "Courier New"
+IconFile: 3, 30, 30, 15, 15, "https://www.spotternetwork.org/iconsheets/SN_Reports_096.png"
+
+Icon: 28.078774,-80.696983,000,3,7,"Reported By: Noah Brauner\nFlash Flood\nTime: 2026-10-08 22:18:11 UTC\nNotes: Huge puddles, inch of rain at least,"
+Icon: 35.2,-97.5,000,3,4,"Reported By: Jane Chaser\nHail\nTime: 2026-10-08 22:30:00 UTC\nSize: 1.75\nNotes: golf balls"
+Icon: 35.4,-97.2,000,3,1,"Reported By: Sam Spotter\nTornado\nTime: 2026-10-08 22:35:00 UTC\nNotes: Rope tornado over open field"

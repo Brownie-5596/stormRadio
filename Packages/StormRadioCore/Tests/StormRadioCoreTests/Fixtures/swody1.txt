@@ -1,0 +1,49 @@
+
+000
+ACUS01 KWNS 081933
+SWODY1
+SPC AC 081932
+
+Day 1 Convective Outlook  
+NWS Storm Prediction Center Norman OK
+0232 PM CDT Thu Oct 08 2026
+
+Valid 082000Z - 091200Z
+
+...THERE IS A MARGINAL RISK OF SEVERE THUNDERSTORMS ACROSS THE
+CENTRAL PORTION OF THE FLORIDA PENINSULA AND IOWA...
+
+...SUMMARY...
+Localized severe thunderstorms may occur across the central portion
+of the Florida Peninsula and/or across Iowa tonight.
+
+...20Z Update...
+The forecast remains on track, and no changes were needed with this
+update. See the previous discussion below for details.
+
+..Weinman.. 10/08/2026
+
+.PREV DISCUSSION... /ISSUED 1123 AM CDT Thu Oct 08 2026/
+
+...Florida Peninsula...
+Visible-satellite imagery shows a cloud shield generally near and
+north of a residual frontal zone draped across the central portion
+of the FL Peninsula.  Filtered sunshine generally south of the I-4
+corridor will contribute to weak destabilization in the presence of 
+a tropical airmass characterized by mid-upper 70s deg F surface
+dewpoints.  Model forecast soundings show moderate effective shear
+(25-30 kt) and a veering wind profile through a deep layer.  Given
+the very moist boundary layer coupled with proximity to the frontal
+zone and shear supporting potentially transient weak rotation, a
+brief tornado or waterspout is possible.
+
+...Iowa...
+Isolated to scattered elevated thunderstorms are forecast
+tonight in tandem with around 1000 J/kg MUCAPE developing as warm
+advection and isentropic ascent increase to the northeast of a
+northeastward-advancing warm front.  With effective shear in the
+cloud-bearing layer expected to increase to 40+ kt, the possibility
+exists for a few elevated supercells late this evening into the
+overnight, with a few instances of marginally severe hail possible.
+
+$$

@@ -1,0 +1,47 @@
+
+000
+ACUS11 KWNS 061904
+SWOMCD
+SPC MCD 061904 
+FLZ000-062100-
+
+Mesoscale Discussion 2346
+NWS Storm Prediction Center Norman OK
+0204 PM CDT Tue Oct 06 2026
+
+Areas affected...west-central Florida Peninsula
+
+Concerning...Severe potential...Watch unlikely 
+
+Valid 061904Z - 062100Z
+
+Probability of Watch Issuance...5 percent
+
+SUMMARY...The risk for a brief tornado/waterspout will increase in
+the short term across the west-central Florida coast.
+
+DISCUSSION...A few transient supercells have been noted over the
+eastern Gulf offshore from the west-central FL coast. Recently, a
+more persistent and stronger rotation signature has been noted with
+a small supercell west of Tampa Bay. This cell is near the
+differential heating zone/cold front where low-level instability in
+stronger and low-level SRH is maximized near and north of the
+boundary. This cell, and others developing offshore may shift closer
+to shore over the next 1-2 hours. As this occurs, a risk for a brief
+tornado/waterspout moving onshore will be possible. The risk will
+rapidly decrease inland from the immediate coast. Given the
+generally modest environmental parameter space and very small and
+focused risk area, a watch is not expected.
+
+..Leitman/Smith.. 10/06/2026
+
+...Please see www.spc.noaa.gov for graphic product...
+
+ATTN...WFO...TBW...
+
+LAT...LON   28128331 28218317 28288300 28288287 28188269 27768247
+            27598248 27508249 27358263 27298277 27388301 27668317
+            28058333 28128331 
+
+MOST PROBABLE PEAK TORNADO INTENSITY...UP TO 90 MPH
+

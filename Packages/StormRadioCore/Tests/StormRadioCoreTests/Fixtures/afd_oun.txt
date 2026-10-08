@@ -1,0 +1,106 @@
+
+000
+FXUS64 KOUN 081739
+AFDOUN
+
+Area Forecast Discussion
+National Weather Service Norman OK
+1239 PM CDT Thu Oct 8 2026
+
+...New NEAR TERM, SHORT TERM...
+
+.KEY MESSAGES...
+Updated at 1238 PM CDT Thu Oct 8 2026
+
+- Unseasonably hot through Monday with this trend ending Tuesday 
+
+- Dry through Monday with a 15-20% chance for rain on Tuesday
+
+- Rain & storm chances increase Wednesday with the potential for
+  much cooler weather by the end of the week 
+
+&&
+
+.NEAR TERM...
+(Rest of today and tonight)
+Issued at 1238 PM CDT Thu Oct 8 2026
+
+Unseasonably warm weather continues under the influence of the ridge 
+over the western CONUS. Most of the area is expected to see highs in 
+the upper 80s to low 90s with clear skies and light winds. 
+Temperatures will drop to near 60 tonight for lows.
+
+Day
+
+&&
+
+.SHORT TERM...
+(Friday through Saturday night)
+Issued at 1238 PM CDT Thu Oct 8 2026
+
+The pattern stays static over the next few days with highs in the 
+upper 80s / lower 90s under sunny skies and lows in the low to mid 
+60s. Saturday afternoon looks a bit breezier in northwest Oklahoma.
+
+Day
+
+&&
+
+.LONG TERM...
+(Sunday through Wednesday)
+Issued at 106 AM CDT Thu Oct 8 2026
+
+On Sunday, the remnants of "Isaias" is expected to be tracking up 
+the Mississippi Delta Region.  The circulation from this post-
+tropical system will be building a ridge upstream/westward across 
+the Southern Plains which will result in hotter daytime temperatures 
+for Sunday and Monday. Our area could see highs in the lower to mid 
+90s for Sunday & Monday and warmer nights which will be near record-
+breaking for this time of the year.  A system moving through the 
+main jet stream across the Northeastern U.S. may push the first 
+of two cold fronts across our area for next week, with the latter
+much stronger at the end of the week. Deterministic models are 
+not consistent with the handling of the first front with the 
+ECMWF & NBM pushing it into our area Tuesday before stalling out 
+across southwest Oklahoma while the GFS stalls it out up in 
+Kansas. Based on the first solution, much of our area could see a 
+slight cool-down Tuesday from hot to still unseasonably warm with
+highs in the lower to mid 80s although our southwest CWA could stay
+hot. There is also a 15-20% chance for scattered rain on Tuesday 
+with this first potential frontal passage. Rain & Storm chances 
+increase becoming more widespread on Wednesday as a large Pacific-
+based system starts digging across the U.S. Southwest toward the
+Southern Plains.
+
+&&
+
+.AVIATION...
+(18Z TAFS)
+Issued at 1139 AM CDT Thu Oct 8 2026
+
+VFR conditions and light winds continue into this morning with
+speeds increasing slightly mid-morning Friday.
+
+&&
+
+.PRELIMINARY POINT TEMPS/POPS...
+Oklahoma City OK  63  90  64  90 /   0   0   0   0 
+Hobart OK         61  89  62  90 /   0   0   0   0 
+Wichita Falls TX  63  92  62  92 /   0   0   0   0 
+Gage OK           61  89  63  88 /   0   0   0   0 
+Ponca City OK     61  89  62  89 /   0   0   0   0 
+Durant OK         62  90  62  88 /   0   0   0   0 
+
+&&
+
+.OUN WATCHES/WARNINGS/ADVISORIES...
+OK...None.
+TX...None.
+&&
+
+$$
+
+NEAR TERM...14
+SHORT TERM...14
+LONG TERM....68
+AVIATION...01
