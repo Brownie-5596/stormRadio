@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storm Radio Settings</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #16191d; --muted: #5d6670; --line: #dfe3e8;
+    --accent: #e8590c; --accent-text: #ffffff; --chip: #eef1f4; --danger: #c92a2a; --ok: #2b8a3e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --text: #e8ebef; --muted: #9aa4af; --line: #2a3038;
+      --accent: #ff8a3d; --accent-text: #111; --chip: #222831; --danger: #ff6b6b; --ok: #69db7c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --text: #e8ebef; --muted: #9aa4af; --line: #2a3038;
+    --accent: #ff8a3d; --accent-text: #111; --chip: #222831; --danger: #ff6b6b; --ok: #69db7c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  header h1 { font-size: 17px; margin: 0 12px 0 0; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  button, .btn { font: inherit; border: 1px solid var(--line); background: var(--chip); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=text], input[type=number], select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+  input[type=number] { width: 90px; }
+  textarea { width: 100%; min-height: 80px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin: 10px 0; }
+  summary { padding: 12px 14px; cursor: pointer; font-weight: 600; }
+  .body { padding: 4px 14px 14px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .row label { flex: 1; }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .tab { border-radius: 999px; }
+  .tab.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  td input[type=number] { width: 64px; }
+  .blocks li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .blocks { list-style: none; padding: 0; margin: 0; }
+  .blocks li span { flex: 1; }
+  .status { font-size: 13px; color: var(--muted); }
+  .status.ok { color: var(--ok); } .status.err { color: var(--danger); }
+  .profile-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .profile-head input { font-size: 17px; font-weight: 600; }
+  @media (max-width: 600px) { .row { flex-wrap: wrap; } input[type=text] { width: 100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>⛈️ Storm Radio Settings</h1>
+  <label class="btn">Open settings file… <input id="file" type="file" accept=".json,application/json" hidden></label>
+  <button id="defaults">Start from defaults</button>
+  <button id="download" class="primary" disabled>Download settings.json</button>
+  <span id="status" class="status">Open the file you exported from the app (Settings › Import / export), or start from defaults.</span>
+</header>
+<main id="main">
+  <p class="hint">Everything happens in this page — nothing is uploaded. When you're done, download the file, send it to your iPhone or iPad (AirDrop, iCloud Drive, Files) and use <b>Settings › Import / export › Import</b> in Storm Radio.</p>
+</main>
+
+<script id="defaults-json" type="application/json">/*DEFAULTS*/</script>
+<script>
+"use strict";
+const ENUMS = {
+  mode: [["speak","Speak"],["toneThenSpeak","Tone + Speak"],["tone","Tone only"],["notifyOnly","Silent (feed only)"],["off","Off"]],
+  tone: [["none","None"],["eas","EAS two-tone"],["nwr1050","NOAA 1050 Hz"],["siren","Siren sweep"],["alarm","Alarm (hi/lo)"],["tripleBeep","Triple beep"],["doubleBeep","Double beep"],["chimeUp","Chime up"],["chimeDown","Chime down"],["ping","Ping"],["blip","Soft blip"]],
+  distanceMeasure: [["nearestEdge","Nearest edge of warning"],["center","Center of warning"],["storm","Storm location (if given)"]],
+  hailStyle: [["inchesAndObject","2 inch, hen egg size"],["inches","2 inch"],["object","hen egg size"]],
+  compass: [["8","8-point (northeast)"],["16","16-point (east-northeast)"]],
+  locationMode: [["gps","Follow my location (GPS)"],["fixed","Fixed point"]],
+  areaMode: [["radius","Radius"],["polygon","Custom polygon / box"]],
+  outlookCategory: [["NONE","None"],["TSTM","General thunder"],["MRGL","Marginal (1)"],["SLGT","Slight (2)"],["ENH","Enhanced (3)"],["MDT","Moderate (4)"],["HIGH","High (5)"]],
+};
+const ENUM_FOR_KEY = {
+  mode: "mode", mdMode: "mode", watchMode: "mode", outlookMode: "mode",
+  tone: "tone", mdTone: "tone", watchTone: "tone", outlookTone: "tone",
+  distanceMeasure: "distanceMeasure", hailStyle: "hailStyle", compass: "compass",
+  areaMode: "areaMode", outlookMinimumRisk: "outlookCategory",
+};
+const LABELS = {
+  name: "Profile name", startupSummary: "Summary when monitoring starts",
+  // location
+  fixedName: "Fixed point name", radiusMiles: "Radius (miles)", polygonName: "Area name", fixedPoint: "Fixed point (lat, lon)", polygon: "Polygon points (one 'lat, lon' per line)",
+  // rules
+  enabled: "Enabled", maxDistanceMiles: "Max distance (mi, 0 = inside only)", priority: "Priority (1-10)", canInterrupt: "Can interrupt", announceUpdates: "Announce updates", announceEnding: "Announce cancel/expire", notify: "iOS notification",
+  // phrasing
+  issuedAgoMinMinutes: "Say 'issued X ago' if older than (min, -1 = never)", issuedAgoMaxMinutes: "…but not if older than (min)", expiresRelative: "Say time remaining", expiresClock: "Say clock time", use24Hour: "24-hour clock", sayAMPM: "Say AM/PM", compass: "Directions", distanceMeasure: "Measure distance to", hailStyle: "Hail size wording", sayThreatBasis: "Say radar indicated / observed", maxCities: "Max cities", maxCounties: "Max counties", roundDistancesTo: "Round distances to (mi)",
+  // updates
+  threatChanges: "Threat changes (hail, wind, tornado, tags)", extensions: "Time extended/shortened", areaReduced: "Area reduced", areaReducedMinPercent: "…only if reduced by at least (%)", areaExpanded: "Area expanded / counties added", cancellations: "Cancellations", cancelReason: "Say why it was cancelled", expirations: "Expirations", routineUpdates: "Routine updates with no change", cameIntoRange: "Existing alert comes into range", wentOutOfRange: "Alert moves out of range", enteredWarning: "You entered a warning", leftWarning: "You left a warning", enteredWarningDetails: "Include threats when entering", fullMessageOnUpgrade: "Re-read whole warning when it gets worse",
+  // path
+  minimumRisk: "Minimum risk (1-5)", leadTimesMinutes: "Warn at (minutes out, comma separated)", pathHalfWidthMiles: "Path width each side (mi)", onlyInsideWarning: "Only when inside the warning",
+  // reports
+  maxAgeMinutes: "Ignore reports older than (min)", delayedNoteMinutes: "Call it delayed if released this late (min)", sayReporter: "Say who reported it", sayRemarks: "Read remarks", saySource: "Say the source", minMagnitude: "Min magnitude", sources: "Sources",
+  // spc
+  mdEnabled: "Announce mesoscale discussions", mdNationwide: "MDs nationwide", mdMaxDistanceMiles: "MD max distance (mi)", mdMode: "MD announce", mdTone: "MD sound", mdPriority: "MD priority", mdReadSummary: "Read MD summary",
+  watchEnabled: "Announce new SPC watches", watchMode: "Watch announce", watchTone: "Watch sound", watchPriority: "Watch priority", watchReadThreats: "Read watch threats",
+  outlookEnabled: "Announce outlooks", outlookDays: "Outlook days (e.g. 1, 2, 3)", outlookMinimumRisk: "Only if max risk at least", outlookMode: "Outlook announce", outlookTone: "Outlook sound", outlookPriority: "Outlook priority", outlookSayMyRisk: "Say risk at my location", outlookReadSummary: "Read outlook summary",
+  // afd
+  includeLocalOffice: "My local NWS office", extraOffices: "Other offices (e.g. OUN, ICT)", readSectionsOnIssue: "Sections read when issued", readSectionsOnDemand: "Sections read with the AFD button",
+  // voice
+  rate: "Speed (0.3 – 0.65)", pitch: "Pitch (0.6 – 1.6)", volume: "Voice volume (0–1)", toneVolume: "Tone volume (0–1)", voiceIdentifier: "Voice identifier (blank = default)", duckOtherAudio: "Lower music while speaking", interruptSpokenAudio: "Pause podcasts / navigation", gapSeconds: "Pause between messages (s)",
+  // interrupts
+  minimumPriority: "Minimum priority to interrupt", minimumGap: "Must be higher by", resumeInterrupted: "Re-read interrupted message", pdsBoost: "PDS priority boost", emergencyAlwaysTop: "Emergencies always priority 10", destructiveBoost: "Destructive boost", considerableBoost: "Considerable boost", observedTornadoBoost: "Observed tornado boost",
+  // general
+  contactInfo: "Contact for NWS (email or website)", mpingAPIKey: "mPING API token", alertPollSeconds: "Check NWS alerts every (s)", reportPollSeconds: "Check storm reports every (s)", productPollSeconds: "Check SPC products every (s)", afdPollSeconds: "Check AFDs every (s)", limitToNearbyStates: "Only download my state + neighbors", postNotifications: "Post iOS notifications", keepAliveAudio: "Keep alive with silent audio", keepScreenOn: "Keep screen on while monitoring",
+};
+const SECTIONS = [
+  ["location", "📍 Location & area"], ["alertRules", "⚠️ Warnings & watches"], ["otherAlertsRule", "Other alert types (not listed)"],
+  ["template", "🧱 Message builder"], ["phrasing", "🔤 Wording"], ["updates", "🔁 Updates, cancels & entering warnings"],
+  ["path", "➡️ Storm path alerts"], ["reports", "🧍 Storm reports"], ["spc", "📄 SPC: MDs, watches, outlooks"],
+  ["afd", "📘 Forecast discussions"], ["voice", "🔊 Voice & sounds"], ["interrupts", "❗ Priorities & interruptions"],
+];
+const BLOCK_LABELS = {
+  tags: "Tags (PDS, Emergency, Considerable, Destructive)", event: "Warning type", office: "Issuing NWS office", issuedAgo: "Issued X minutes ago",
+  distance: "Distance & direction from you", threats: "Threats & how they were detected", source: "Source line (who reported it)",
+  hazardText: "Hazard text (when no threat tags)", storm: "Storm location & motion", motion: "Storm motion only", expires: "Expiration time",
+  cities: "Cities in the warning", counties: "Counties / areas", path: "In-path arrival estimate", headline: "NWS headline", instructions: "Instructions (take cover...)",
+};
+const RULE_COLS = ["enabled", "mode", "tone", "maxDistanceMiles", "priority", "canInterrupt", "announceUpdates", "announceEnding", "notify"];
+const REPORT_COLS = ["enabled", "mode", "tone", "minMagnitude", "priority"];
+
+let settings = null;
+let currentTab = null;
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "checked" || k === "disabled" || k === "value") e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c != null) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return e;
+}
+const label = (k) => LABELS[k] || k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+
+function setStatus(text, kind = "") { const s = $("status"); s.textContent = text; s.className = "status " + kind; }
+
+function selectFor(kind, value, onchange) {
+  const s = el("select", { onchange: (e) => onchange(e.target.value) });
+  for (const [v, t] of ENUMS[kind]) s.append(el("option", { value: v }, t));
+  s.value = value;
+  return s;
+}
+
+function input(value, key, onchange) {
+  if (typeof value === "boolean") return el("input", { type: "checkbox", checked: value, onchange: (e) => onchange(e.target.checked) });
+  if (typeof value === "number") return el("input", { type: "number", step: "any", value: String(value), onchange: (e) => { const n = Number(e.target.value); if (!Number.isNaN(n)) onchange(Number.isInteger(value) && Number.isInteger(n) ? n : n); } });
+  if (ENUM_FOR_KEY[key]) return selectFor(ENUM_FOR_KEY[key], value, onchange);
+  return el("input", { type: "text", value: value ?? "", onchange: (e) => onchange(e.target.value) });
+}
+
+function listInput(arr, numeric, onchange) {
+  return el("input", { type: "text", value: arr.join(", "), onchange: (e) => {
+    const parts = e.target.value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+    onchange(numeric ? parts.map(Number).filter((n) => !Number.isNaN(n)) : parts.map((s) => s.toUpperCase()));
+  } });
+}
+
+/** Generic editor for a flat-ish object. */
+function objectRows(obj, skip = []) {
+  const rows = [];
+  for (const [k, v] of Object.entries(obj)) {
+    if (skip.includes(k)) continue;
+    if (Array.isArray(v)) {
+      const numeric = v.length ? typeof v[0] === "number" : ["leadTimesMinutes", "outlookDays"].includes(k);
+      rows.push(el("div", { class: "row" }, el("label", {}, label(k)), listInput(v, numeric, (nv) => { obj[k] = nv; })));
+    } else if (v !== null && typeof v === "object") {
+      continue;
+    } else {
+      rows.push(el("div", { class: "row" }, el("label", {}, label(k)), input(v, k, (nv) => { obj[k] = nv; })));
+    }
+  }
+  return rows;
+}
+
+function rulesTable(map, cols, defaultsFor, extra) {
+  const table = el("table");
+  table.append(el("tr", {}, el("th", {}, "Type"), cols.map((c) => el("th", {}, label(c).replace(/ \(.*\)/, ""))), el("th")));
+  for (const name of Object.keys(map).sort()) {
+    const r = map[name];
+    const tr = el("tr", {}, el("td", {}, name));
+    for (const c of cols) tr.append(el("td", {}, input(r[c], c, (nv) => { r[c] = nv; })));
+    tr.append(el("td", {}, el("button", { class: "danger", title: "Remove", onclick: () => { delete map[name]; render(); } }, "✕")));
+    table.append(tr);
+  }
+  const wrap = el("div", { class: "table-wrap" }, table);
+  if (extra) {
+    const name = el("input", { type: "text", placeholder: "Exact NWS event name, e.g. Lake Effect Snow Warning" });
+    wrap.append(el("div", { class: "row" }, name, el("button", { onclick: () => { const n = name.value.trim(); if (n && !map[n]) { map[n] = structuredClone(defaultsFor); render(); } } }, "Add type")));
+  }
+  return wrap;
+}
+
+function section(title, ...content) {
+  return el("details", {}, el("summary", {}, title), el("div", { class: "body" }, ...content));
+}
+
+function pointText(p) { return p ? `${p.lat}, ${p.lon}` : ""; }
+function parsePoint(s) {
+  const m = s.split(/[,\s]+/).map(Number).filter((n) => !Number.isNaN(n));
+  return m.length >= 2 ? { lat: m[0], lon: m[1] } : null;
+}
+
+function profileEditor(p) {
+  const out = [];
+  const head = el("div", { class: "profile-head" },
+    el("input", { type: "text", value: p.name, onchange: (e) => { p.name = e.target.value; renderTabs(); } }),
+    settings.activeProfileID === p.id ? el("span", { class: "status ok" }, "✓ active profile")
+      : el("button", { onclick: () => { settings.activeProfileID = p.id; render(); } }, "Make active"),
+    el("button", { onclick: () => { const c = structuredClone(p); c.id = crypto.randomUUID(); c.name = p.name + " copy"; settings.profiles.push(c); currentTab = c.id; render(); } }, "Duplicate"),
+    settings.profiles.length > 1 ? el("button", { class: "danger", onclick: () => { if (confirm(`Delete profile "${p.name}"?`)) { settings.profiles = settings.profiles.filter((x) => x !== p); if (settings.activeProfileID === p.id) settings.activeProfileID = settings.profiles[0].id; currentTab = settings.profiles[0].id; render(); } } }, "Delete") : null,
+    el("label", {}, input(p.startupSummary, "startupSummary", (v) => { p.startupSummary = v; }), " Summary when monitoring starts"));
+  out.push(head);
+
+  for (const [key, title] of SECTIONS) {
+    const v = p[key];
+    if (v === undefined) continue;
+    if (key === "location") {
+      const loc = v;
+      out.push(section(title,
+        el("div", { class: "row" }, el("label", {}, "Listen from"), selectFor("locationMode", loc.mode, (x) => { loc.mode = x; })),
+        el("div", { class: "row" }, el("label", {}, label("fixedPoint")), el("input", { type: "text", value: pointText(loc.fixedPoint), placeholder: "35.2226, -97.4395", onchange: (e) => { const pt = parsePoint(e.target.value); if (pt) loc.fixedPoint = pt; else delete loc.fixedPoint; } })),
+        ...objectRows(loc, ["mode", "fixedPoint", "polygon"]),
+        el("div", { class: "row" }, el("label", {}, label("polygon"))),
+        el("textarea", { onchange: (e) => { loc.polygon = e.target.value.split("\n").map(parsePoint).filter(Boolean); } }, loc.polygon.map(pointText).join("\n")),
+        el("p", { class: "hint" }, "Tip: it's easier to draw the polygon on the map in the app (Settings › Location & area).")));
+    } else if (key === "alertRules") {
+      out.push(section(title, el("p", { class: "hint" }, "One row per NWS alert type. Max distance 0 = only when you're inside it. Priority 1–10."),
+        rulesTable(v, RULE_COLS, p.otherAlertsRule, true)));
+    } else if (key === "otherAlertsRule") {
+      out.push(section(title, ...objectRows(v)));
+    } else if (key === "template") {
+      const list = el("ul", { class: "blocks" });
+      v.blocks.forEach((b, i) => {
+        list.append(el("li", {},
+          el("input", { type: "checkbox", checked: b.enabled, onchange: (e) => { b.enabled = e.target.checked; } }),
+          el("span", {}, BLOCK_LABELS[b.kind] || b.kind),
+          el("button", { disabled: i === 0, onclick: () => { [v.blocks[i - 1], v.blocks[i]] = [v.blocks[i], v.blocks[i - 1]]; render(); } }, "↑"),
+          el("button", { disabled: i === v.blocks.length - 1, onclick: () => { [v.blocks[i + 1], v.blocks[i]] = [v.blocks[i], v.blocks[i + 1]]; render(); } }, "↓")));
+      });
+      out.push(section(title,
+        el("p", { class: "hint" }, "Order and toggle the pieces of a warning announcement. Type, tags, office, 'issued ago' and distance form the opening sentence."),
+        list,
+        el("div", { class: "row" }, el("label", {}, "Use my own text format instead"), input(v.useCustomFormat, "useCustomFormat", (x) => { v.useCustomFormat = x; })),
+        el("textarea", { onchange: (e) => { v.customFormat = e.target.value; } }, v.customFormat),
+        el("p", { class: "hint" }, "Placeholders: {a} {tags} {event} {verb} {issuedAgo} {distance} {office} {threats} {source} {hazardText} {storm} {motion} {expires} {expiresIn} {expiresAt} {cities} {counties} {path} {headline} {instructions}")));
+    } else if (key === "reports") {
+      const srcRows = Object.keys(v.sources).map((s) => el("div", { class: "row" }, el("label", {}, { nwsLSR: "NWS Local Storm Reports", spotterNetwork: "SpotterNetwork", mping: "mPING (needs API token)" }[s] || s), input(v.sources[s], s, (x) => { v.sources[s] = x; })));
+      out.push(section(title, ...objectRows(v, ["sources", "categories"]), el("h4", {}, "Sources"), ...srcRows,
+        el("h4", {}, "Report types"), el("p", { class: "hint" }, "Min magnitude: hail in inches, wind gusts in mph (0 = any)."),
+        rulesTable(v.categories, REPORT_COLS, { enabled: true, mode: "speak", tone: "blip", minMagnitude: 0, priority: 4 }, false)));
+    } else {
+      out.push(section(title, ...objectRows(v)));
+    }
+  }
+  return out;
+}
+
+function renderTabs() {
+  const tabs = el("div", { class: "tabs" });
+  for (const p of settings.profiles) {
+    tabs.append(el("button", { class: "tab" + (currentTab === p.id ? " active" : ""), onclick: () => { currentTab = p.id; render(); } },
+      p.name + (p.id === settings.activeProfileID ? " ✓" : "")));
+  }
+  tabs.append(el("button", { class: "tab" + (currentTab === "general" ? " active" : ""), onclick: () => { currentTab = "general"; render(); } }, "⚙️ App (all profiles)"));
+  const old = document.querySelector(".tabs");
+  if (old) old.replaceWith(tabs);
+  return tabs;
+}
+
+function render() {
+  const main = $("main");
+  const open = new Set([...document.querySelectorAll("details[open] > summary")].map((s) => s.textContent));
+  main.replaceChildren();
+  main.append(renderTabs());
+  if (currentTab === "general") {
+    main.append(section("⚙️ Data sources, polling & background", ...objectRows(settings.general)));
+  } else {
+    const p = settings.profiles.find((x) => x.id === currentTab) || settings.profiles[0];
+    currentTab = p.id;
+    main.append(...profileEditor(p));
+  }
+  for (const d of main.querySelectorAll("details")) if (open.has(d.firstChild.textContent)) d.open = true;
+  $("download").disabled = false;
+}
+
+function load(obj, source) {
+  if (!obj || !Array.isArray(obj.profiles)) {
+    if (obj && (obj.alertRules || obj.location)) obj = { schemaVersion: 1, activeProfileID: obj.id, profiles: [obj], general: structuredClone(DEFAULTS.general) };
+    else throw new Error("This doesn't look like a Storm Radio settings file.");
+  }
+  obj.general = Object.assign(structuredClone(DEFAULTS.general), obj.general || {});
+  settings = obj;
+  currentTab = settings.activeProfileID;
+  render();
+  setStatus(`Loaded ${source}: ${settings.profiles.length} profile(s).`, "ok");
+}
+
+const DEFAULTS = JSON.parse($("defaults-json").textContent);
+
+$("file").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try { load(JSON.parse(await f.text()), f.name); } catch (err) { setStatus(err.message, "err"); }
+  e.target.value = "";
+});
+$("defaults").addEventListener("click", () => load(structuredClone(DEFAULTS), "defaults"));
+$("download").addEventListener("click", () => {
+  document.activeElement && document.activeElement.blur();
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "StormRadio-settings.json" });
+  document.body.append(a); a.click(); a.remove();
+  setStatus("Downloaded StormRadio-settings.json — now import it in the app.", "ok");
+});
+</script>
+</body>
+</html>

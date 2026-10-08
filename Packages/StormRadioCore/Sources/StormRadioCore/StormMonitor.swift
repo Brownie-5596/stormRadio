@@ -110,9 +110,38 @@ public actor StormMonitor {
 
     /// Call when the phone's location changes. Returns entered/left/path announcements.
     public func updateLocation(_ p: GeoPoint?, now: Date) -> [Announcement] {
+        let hadReference = referencePoint != nil
         gpsPoint = p
         guard tracker.initialized else { return [] }
+        if !hadReference && referencePoint != nil {
+            // First fix after alerts were already loaded: baseline quietly and give one summary
+            // instead of announcing every in-range alert as "came into range".
+            baselineQuietly(now: now)
+            needsStartupSummary = false
+            return profile.startupSummary ? [nearbySummary(now: now, startup: true)] : []
+        }
         return evaluateLocation(now: now)
+    }
+
+    /// Marks the current range/inside state of every alert as already known, without announcing.
+    func baselineQuietly(now: Date) {
+        guard let ref = referencePoint else { return }
+        for e in tracker.activeEvents {
+            let a = e.current
+            let zm = zoneMatch(a)
+            let inRange = isInRange(a, zoneMatch: zm)
+            let inside = AlertGeo.isInside(a, ref, zoneMatch: zm)
+            var fired = e.pathThresholdsFired
+            if let pr = pathResult(a, now: now), pr.inPath, let eta = pr.etaMinutes {
+                for t in profile.path.leadTimesMinutes where Double(t) >= eta { fired.insert(t) }
+            }
+            tracker.update(e.key) {
+                $0.inRange = inRange
+                $0.userInside = inside
+                $0.announced = $0.announced || inRange
+                $0.pathThresholdsFired = fired
+            }
+        }
     }
 
     func refreshPointInfoIfNeeded() async {

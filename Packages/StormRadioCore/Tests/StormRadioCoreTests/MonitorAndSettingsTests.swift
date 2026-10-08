@@ -103,6 +103,23 @@ final class MonitorAndSettingsTests: XCTestCase {
         XCTAssertEqual(later.filter { $0.category == .path }.count, 1, "\(later.map { $0.spokenText })")
     }
 
+    func testFirstGPSFixGivesSummaryNotABurst() async {
+        let now = date("2026-05-06T23:40:00Z")
+        var s = AppSettings.defaults
+        var prof = s.activeProfile
+        prof.location.mode = .gps
+        s.activeProfile = prof
+        let m = StormMonitor(settings: s)
+        let first = await m.process(alerts: [makeAlert(sent: now), makeAlert(event: "Tornado Warning", etn: 7, sent: now)], now: now)
+        XCTAssertEqual(first.count, 1) // "waiting for a location" summary
+        let fix = await m.updateLocation(GeoPoint(lat: 35.2, lon: -97.5), now: now.addingTimeInterval(30))
+        XCTAssertEqual(fix.count, 1)
+        XCTAssertEqual(fix.first?.category, .summary)
+        XCTAssertTrue(fix.first?.spokenText.contains("Active in range") ?? false, fix.first?.spokenText ?? "")
+        let next = await m.updateLocation(GeoPoint(lat: 35.21, lon: -97.5), now: now.addingTimeInterval(60))
+        XCTAssertTrue(next.isEmpty)
+    }
+
     func testSettingsRoundTripAndLenientImport() throws {
         let s = AppSettings.defaults
         let data = try SettingsIO.encode(s)

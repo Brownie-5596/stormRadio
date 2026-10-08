@@ -71,12 +71,18 @@ final class TonePlayer {
         player.stop()
     }
 
+    /// Stops audio I/O so the audio session can be deactivated (needed for other apps' audio to un-duck).
+    func pauseEngine() {
+        if configured && engine.isRunning { engine.pause() }
+    }
+
     /// Loops silence so iOS keeps the app's audio (and therefore the app) running.
     func startSilence() {
-        guard !silenceRunning, ensureRunning() else { return }
+        guard ensureRunning(), !silenceRunning else { return }
         let frames = AVAudioFrameCount(44_100)
         guard let b = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames) else { return }
         b.frameLength = frames // zero-filled
+        silencePlayer.stop() // clears anything previously scheduled
         silencePlayer.volume = 0
         silencePlayer.scheduleBuffer(b, at: nil, options: .loops, completionHandler: nil)
         silencePlayer.play()
@@ -93,7 +99,7 @@ final class TonePlayer {
     func restartIfNeeded() {
         guard configured else { return }
         if !engine.isRunning { _ = ensureRunning() }
-        if silenceRunning {
+        if silenceRunning && !silencePlayer.isPlaying {
             silenceRunning = false
             startSilence()
         }

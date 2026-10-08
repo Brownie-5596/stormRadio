@@ -148,33 +148,49 @@ final class AppModel: ObservableObject {
         return now.timeIntervalSince(last) >= Double(max(10, seconds))
     }
 
+    private var lastSnapshot = Date.distantPast
+    private var lastZoneSave = Date()
+
     private func tick() async {
         let now = Date()
         let g = settings.general
+        var didWork = false
         if let loc = pendingLocation {
             pendingLocation = nil
             let p = GeoPoint(lat: loc.coordinate.latitude, lon: loc.coordinate.longitude)
             deliver(await monitor.updateLocation(p, now: now))
+            didWork = true
         }
         if due("alerts", every: g.alertPollSeconds, now: now) {
             lastPoll["alerts"] = now
             deliver(await monitor.pollAlerts(now: now))
             lastAlertPoll = Date()
+            didWork = true
         }
         if due("reports", every: g.reportPollSeconds, now: now) {
             lastPoll["reports"] = now
             deliver(await monitor.pollReports(now: now))
+            didWork = true
         }
         if due("spc", every: g.productPollSeconds, now: now) {
             lastPoll["spc"] = now
             deliver(await monitor.pollSPC(now: now))
+            didWork = true
         }
         if due("afd", every: g.afdPollSeconds, now: now) {
             lastPoll["afd"] = now
             deliver(await monitor.pollAFD(now: now))
+            didWork = true
         }
-        await refreshSnapshots()
-        if Int(now.timeIntervalSince1970) % 300 < 4 { Storage.save(zones: await monitor.zoneCache) }
+        // Snapshots for the UI: after any work, and every 20 s so countdowns stay fresh.
+        if didWork || now.timeIntervalSince(lastSnapshot) > 20 {
+            lastSnapshot = now
+            await refreshSnapshots()
+        }
+        if now.timeIntervalSince(lastZoneSave) > 300 {
+            lastZoneSave = now
+            Storage.save(zones: await monitor.zoneCache)
+        }
     }
 
     func refreshSnapshots() async {

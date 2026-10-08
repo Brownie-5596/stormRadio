@@ -174,15 +174,21 @@ final class SpeechCenter: NSObject, ObservableObject {
         } else {
             opts.insert(.mixWithOthers)
         }
-        do {
-            if sessionDucking != duck || s.category != .playback {
-                if sessionDucking && !duck { try? s.setActive(false, options: .notifyOthersOnDeactivation) }
+        if sessionDucking != duck || s.category != .playback || s.categoryOptions != opts {
+            // Ducking only takes effect when the session (re)activates, and deactivating requires audio I/O to be stopped.
+            tones.pauseEngine()
+            try? s.setActive(false, options: .notifyOthersOnDeactivation)
+            do {
                 try s.setCategory(.playback, mode: .voicePrompt, options: opts)
-                sessionDucking = duck
+            } catch {
+                print("Audio session category error: \(error)")
             }
+            sessionDucking = duck
+        }
+        do {
             try s.setActive(true)
         } catch {
-            print("Audio session error: \(error)")
+            print("Audio session activation error: \(error)")
         }
         tones.restartIfNeeded()
     }
@@ -200,18 +206,15 @@ final class SpeechCenter: NSObject, ObservableObject {
     func updateIdleAudio() {
         guard current == nil else { return }
         let s = AVAudioSession.sharedInstance()
+        tones.pauseEngine()
+        try? s.setActive(false, options: .notifyOthersOnDeactivation)
+        sessionDucking = false
         if keepAlive {
-            try? s.setActive(false, options: .notifyOthersOnDeactivation)
             try? s.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            sessionDucking = false
             try? s.setActive(true)
             tones.startSilence()
         } else {
             tones.stopSilence()
-            if sessionDucking || s.category == .playback {
-                try? s.setActive(false, options: .notifyOthersOnDeactivation)
-                sessionDucking = false
-            }
         }
     }
 
