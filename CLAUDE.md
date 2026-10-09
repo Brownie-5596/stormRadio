@@ -26,8 +26,8 @@ AFDs and storm reports aloud, filtered by a per-profile configuration. See READM
 - Linux: Swift toolchain may need installing (swift.org tarball, Ubuntu 24.04). Then `cd Packages/StormRadioCore && swift test`.
 - Live check: `swift run stormradio-cli simulate --lat 35.22 --lon -97.44 [--radius 150]`.
 - iOS build only happens in GitHub Actions (`.github/workflows/build-ios.yml`, macos-15, Xcode 16.4): runs core tests,
-  `xcodegen generate`, unsigned `xcodebuild`, zips `Payload/` → `StormRadio.ipa`, uploads artifact and updates the
-  `latest-<branch>` pre-release. Compile errors are printed by the "Show compile errors" step.
+  `xcodegen generate`, unsigned `xcodebuild`, zips `Payload/` → `StormRadio.ipa`, uploads the artifact and publishes the
+  `latest` release (see below). Compile errors are printed by the "Show compile errors" step.
 - App target uses Swift 5 language mode (minimal concurrency checking).
 - Each CI build gets version `0.2.<run number>` / build `<run number>` and is published to the fixed `latest` release
   (`StormRadio.ipa`, `altstore-source.json` made by `tools/make_altstore_source.py`, `icon.png`). The app's `UpdateChecker`

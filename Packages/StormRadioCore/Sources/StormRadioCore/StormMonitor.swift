@@ -771,7 +771,7 @@ public actor StormMonitor {
         return out
     }
 
-    static func officeName(from text: String) -> String? {
+    public static func officeName(from text: String) -> String? {
         for line in text.split(separator: "\n").prefix(12) where line.hasPrefix("National Weather Service ") {
             var name = line.dropFirst("National Weather Service ".count).trimmingCharacters(in: .whitespaces)
             if name.count > 3, name.dropLast(2).hasSuffix(" ") { name = String(name.dropLast(3)) }
