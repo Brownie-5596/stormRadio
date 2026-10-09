@@ -11,6 +11,16 @@ struct RadioView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    if model.updates.updateAvailable, let l = model.updates.latest {
+                        NavigationLink { UpdatesView() } label: {
+                            Label("Storm Radio \(l.version) is available — tap to update", systemImage: "arrow.down.circle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                                .background(Color.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
                     powerCard
                     if let cur = model.speech.current { nowPlaying(cur) }
                     buttons
@@ -24,6 +34,7 @@ struct RadioView: View {
                 ToolbarItem(placement: .topBarTrailing) { profileMenu }
             }
             .refreshable { model.refreshNow() }
+            .task { await model.updates.check() }
         }
     }
 
@@ -133,6 +144,7 @@ struct RadioView: View {
                 BigButtonLabel(title: model.isSnoozed ? "Snoozed" : "Snooze", icon: "moon.zzz", color: .brown)
             }
             BigButton(title: "Refresh now", icon: "arrow.clockwise", color: .green) { model.refreshNow() }
+            BigButton(title: "Products", icon: "doc.text.magnifyingglass", color: .indigo) { model.selectedTab = .products }
         }
     }
 

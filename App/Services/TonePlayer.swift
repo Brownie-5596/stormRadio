@@ -49,8 +49,24 @@ final class TonePlayer {
         return b
     }
 
+    private var customPlayer: AVAudioPlayer?
+    private var customDelegate: CustomSoundDelegate?
+    private var customLimitTask: Task<Void, Never>?
+
+    /// Longest a custom sound may play before it's cut off (seconds).
+    var customMaxSeconds: Double = 10
+
     /// Plays a tone and calls `completion` on the main actor when it finishes (or immediately if it can't play).
+    /// Custom sounds that aren't on this device fall back to the double beep.
     func play(_ tone: ToneID, volume: Double, completion: @escaping @MainActor () -> Void) {
+        if tone.isCustom {
+            if let url = SoundLibrary.fileURL(for: tone) {
+                playCustom(url, volume: volume, completion: completion)
+            } else {
+                play(.doubleBeep, volume: volume, completion: completion)
+            }
+            return
+        }
         guard tone != .none, let buf = buffer(for: tone), ensureRunning() else { completion(); return }
         playToken += 1
         let token = playToken
@@ -65,10 +81,45 @@ final class TonePlayer {
         player.play()
     }
 
+    private func playCustom(_ url: URL, volume: Double, completion: @escaping @MainActor () -> Void) {
+        stopCustom()
+        playToken += 1
+        let token = playToken
+        guard let p = try? AVAudioPlayer(contentsOf: url) else { completion(); return }
+        let finish: @MainActor () -> Void = { [weak self] in
+            guard let self, self.playToken == token else { return }
+            self.stopCustom()
+            completion()
+        }
+        let delegate = CustomSoundDelegate { Task { @MainActor in finish() } }
+        p.delegate = delegate
+        p.volume = Float(max(0, min(1, volume)))
+        customDelegate = delegate
+        customPlayer = p
+        guard p.play() else { completion(); return }
+        let limit = customMaxSeconds
+        if p.duration > limit {
+            customLimitTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(limit * 1_000_000_000))
+                guard !Task.isCancelled, let self, self.playToken == token else { return }
+                finish()
+            }
+        }
+    }
+
+    private func stopCustom() {
+        customLimitTask?.cancel()
+        customLimitTask = nil
+        customPlayer?.stop()
+        customPlayer = nil
+        customDelegate = nil
+    }
+
     /// Stops any tone; its completion is not called.
     func stop() {
         playToken += 1
         player.stop()
+        stopCustom()
     }
 
     /// Stops audio I/O so the audio session can be deactivated (needed for other apps' audio to un-duck).
@@ -104,4 +155,13 @@ final class TonePlayer {
             startSilence()
         }
     }
+}
+
+/// Bridges AVAudioPlayer's delegate callback to a closure.
+final class CustomSoundDelegate: NSObject, AVAudioPlayerDelegate {
+    let onFinish: () -> Void
+    init(onFinish: @escaping () -> Void) { self.onFinish = onFinish }
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) { onFinish() }
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) { onFinish() }
 }

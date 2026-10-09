@@ -129,10 +129,7 @@ struct AnnouncementDetailView: View {
                 }
                 if !a.detailText.isEmpty && a.detailText != a.spokenText {
                     GroupBox("Full text") {
-                        Text(a.detailText)
-                            .font(.system(.footnote, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
+                        ReadableText(a.detailText, sourceID: "feed-\(a.id)", title: a.title, speech: model.speech)
                     }
                 }
             }
@@ -168,11 +165,9 @@ struct AlertDetailView: View {
                 }
                 detailGrid
                 if let h = info.alert.nwsHeadline { GroupBox("Headline") { Text(h).frame(maxWidth: .infinity, alignment: .leading) } }
-                GroupBox("Description") {
-                    Text(info.alert.description).font(.footnote).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
-                }
-                if let i = info.alert.instruction, !i.isEmpty {
-                    GroupBox("Instructions") { Text(i).font(.footnote).frame(maxWidth: .infinity, alignment: .leading) }
+                GroupBox("Full text") {
+                    ReadableText(([info.alert.description] + [info.alert.instruction ?? ""]).filter { !$0.isEmpty }.joined(separator: "\n\n"),
+                                 sourceID: "alert-\(info.alert.id)", title: info.alert.event, speech: model.speech)
                 }
                 GroupBox("Areas") { Text(info.alert.areaDesc).font(.footnote).frame(maxWidth: .infinity, alignment: .leading) }
             }

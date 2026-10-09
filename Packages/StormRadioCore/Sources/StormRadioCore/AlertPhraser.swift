@@ -54,6 +54,13 @@ public struct PathResult: Hashable, Sendable {
     /// Miles from the projected track centerline.
     public var offTrackMiles: Double
     public var arrival: Date?
+
+    public init(inPath: Bool, etaMinutes: Double?, offTrackMiles: Double, arrival: Date?) {
+        self.inPath = inPath
+        self.etaMinutes = etaMinutes
+        self.offTrackMiles = offTrackMiles
+        self.arrival = arrival
+    }
 }
 
 public enum StormPath {

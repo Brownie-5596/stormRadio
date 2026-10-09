@@ -19,6 +19,10 @@ something **changes**.
 - **You entered / left a warning** while driving (GPS mode).
 - **In the path**: uses the storm location and motion in each warning to estimate whether a storm will reach you and when. Has a 1–5 risk index (so a 1" hail / 60 mph storm doesn't bother you) and warns at lead times you pick (e.g. 30, 15 and 5 minutes out).
 
+**Products tab**
+- Browse recent mesoscale discussions, SPC watches, Day 1–3 outlooks, your office's AFD and storm reports, with SPC's graphics (tap to zoom), a map, and links to the SPC/NWS pages.
+- **Tap any word** in a product (or a warning's text) to start reading aloud from there; the word being read is highlighted and the text follows along.
+
 **SPC & forecast products**
 - Mesoscale discussions (nationwide or near you), with the area, concern, watch probability and distance from you.
 - New tornado / severe thunderstorm watches nationwide, including PDS watches, with primary threats.
@@ -32,7 +36,8 @@ something **changes**.
 
 **The radio**
 - Priority queue: a tornado warning can cut off a storm report mid-sentence (you choose what can interrupt what, with boosts for PDS, destructive, observed tornado and emergencies).
-- Speak, tone + speak, tone only (a different synthesized sound per type), or silent (feed only).
+- Speak, tone + speak, tone only (a different sound per type), or silent (feed only).
+- **Your own sounds**: Settings › Sounds › Add a sound file (m4a, mp3, wav…), then pick it for any warning or report type. Settings › Test alerts plays sample announcements with your current settings.
 - **Repeat last**, stop, skip, snooze (priority 9+ still speaks), and buttons to read nearby alerts, the latest/nearest MD, SPC watches, Day 1/2 outlooks, the AFD, and recent storm reports.
 - Feed tab: a notification center with everything announced (even silent ones), full text, links to the event page, speak again, share.
 - Map tab: warning polygons, storm reports, MDs and your monitoring area.
@@ -47,15 +52,26 @@ something **changes**.
 - Voice speed, pitch, voice choice, volumes, pause between messages.
 - **Export/import settings** as a JSON file: AirDrop between iPhone and iPad, save to iCloud Drive, or edit on a computer with the web editor (below).
 
-## Installing on your iPhone / iPad (Sideloadly)
+## Installing and updating
 
-1. **Get the app file.** Every push builds the app automatically. Download `StormRadio.ipa` from the
-   [Releases page](https://github.com/Brownie-5596/stormRadio/releases) (pre-release named "Storm Radio build"),
-   or from the latest run on the [Actions tab](https://github.com/Brownie-5596/stormRadio/actions) (Artifacts → StormRadio-ipa).
-2. Open **Sideloadly** on your computer, plug in your iPhone/iPad, drag `StormRadio.ipa` in, enter your Apple ID and press **Start**.
-3. On the device: **Settings → General → VPN & Device Management** → trust your Apple ID's developer profile.
-   On iOS 16+ also turn on **Settings → Privacy & Security → Developer Mode** if asked.
-4. With a free Apple ID the app must be re-signed every 7 days (Sideloadly can auto-refresh). Your settings stay.
+Every push builds the app and publishes it to the **[latest release](https://github.com/Brownie-5596/stormRadio/releases/tag/latest)**.
+The links never change:
+
+- App file: `https://github.com/Brownie-5596/stormRadio/releases/download/latest/StormRadio.ipa`
+- SideStore / AltStore source: `https://github.com/Brownie-5596/stormRadio/releases/download/latest/altstore-source.json`
+
+The app checks for new builds and shows a banner on the Radio tab (Settings › App updates has the details and buttons).
+
+### Option A: SideStore or AltStore (one-tap updates)
+Add the source link above once (Sources › + in SideStore/AltStore, or Settings › App updates › *Add to SideStore* in Storm Radio).
+After that, new builds show up with an **Update** button: no downloading files. SideStore also re-signs apps on the phone,
+so after its one-time setup you don't need a computer for updates or the 7-day refresh. AltStore Classic needs AltServer running on a computer on the same Wi-Fi.
+
+### Option B: Sideloadly (what you use now)
+1. Download `StormRadio.ipa` from the link above (or Settings › App updates › *Download latest*).
+2. In Sideloadly, drag the file in and press Start. **Install over the existing app** (don't delete it first) so your settings and sounds stay.
+3. First time only: Settings › General › VPN & Device Management → trust your Apple ID; on iOS 16+ also turn on Developer Mode.
+4. With a free Apple ID, apps must be re-signed every 7 days (Sideloadly can auto-refresh).
 
 ## First run
 

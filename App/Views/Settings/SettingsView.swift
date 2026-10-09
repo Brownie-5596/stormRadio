@@ -24,7 +24,18 @@ struct SettingsView: View {
                     ProfileSettingsLinks(profile: model.activeProfileBinding)
                 }
 
+                Section("Sounds & testing") {
+                    NavigationLink { SoundsView() } label: { Label("Sounds (add your own)", systemImage: "music.note.list") }
+                    NavigationLink { TestAlertsView() } label: { Label("Test alerts", systemImage: "play.rectangle") }
+                }
+
                 Section("App") {
+                    NavigationLink { UpdatesView() } label: {
+                        HStack {
+                            Label("App updates", systemImage: "arrow.down.app")
+                            if model.updates.updateAvailable { Spacer(); Pill(text: "New", color: .green) }
+                        }
+                    }
                     NavigationLink { DataSettingsView() } label: { Label("Data sources & polling", systemImage: "antenna.radiowaves.left.and.right") }
                     NavigationLink { ImportExportView() } label: { Label("Import / export settings", systemImage: "square.and.arrow.up.on.square") }
                     NavigationLink { SourceStatusView() } label: { Label("Source status", systemImage: "checkmark.seal") }

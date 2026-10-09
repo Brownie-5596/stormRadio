@@ -1,6 +1,6 @@
 import Foundation
 
-/// Generates the built-in alert tones as mono PCM samples (-1...1).
+/// Generates the built-in alert tones as mono PCM samples (-1...1). Custom sounds return no samples.
 public enum ToneSynth {
     public static func samples(_ id: ToneID, sampleRate: Double = 44_100) -> [Float] {
         var out: [Float] = []
@@ -57,6 +57,8 @@ public enum ToneSynth {
             tone([1568, 3136], 0.45, amp: 0.45, decay: 7)
         case .blip:
             tone([660], 0.12, amp: 0.35)
+        default:
+            break
         }
         if !out.isEmpty { silence(0.15) }
         return out

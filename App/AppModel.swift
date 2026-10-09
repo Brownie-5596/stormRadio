@@ -14,6 +14,11 @@ final class AppModel: ObservableObject {
     @Published private(set) var activeAlerts: [ActiveAlertInfo] = []
     @Published private(set) var reports: [StormReport] = []
     @Published private(set) var mds: [MesoscaleDiscussion] = []
+    @Published private(set) var watches: [SPCWatch] = []
+    @Published private(set) var outlooks: [Int: OutlookSummary] = [:]
+    @Published private(set) var afds: [String: AreaForecastDiscussion] = [:]
+    @Published private(set) var productsLoading = false
+    @Published private(set) var productsUpdated: Date?
     @Published private(set) var sourceStatus: [String: SourceStatus] = [:]
     @Published private(set) var pointInfo: PointInfo?
     @Published private(set) var lastAlertPoll: Date?
@@ -22,10 +27,12 @@ final class AppModel: ObservableObject {
     @Published var selectedTab: Tab = .radio
     @Published var openAnnouncementID: String?
 
-    enum Tab: Hashable { case radio, feed, map, settings }
+    enum Tab: Hashable { case radio, feed, products, map, settings }
 
     let speech = SpeechCenter()
     let location = LocationService()
+    let sounds = SoundLibrary()
+    let updates = UpdateChecker()
     private let monitor: StormMonitor
     private var loopTask: Task<Void, Never>?
     private var saveTask: Task<Void, Never>?
@@ -49,6 +56,8 @@ final class AppModel: ObservableObject {
         }
         // Re-publish speech changes so views observing the model refresh.
         speech.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        sounds.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        updates.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         location.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
     }
 
@@ -204,8 +213,32 @@ final class AppModel: ObservableObject {
         activeAlerts = await monitor.activeAlertInfos()
         reports = await monitor.recentReports(minutes: 180)
         mds = await monitor.mds
+        watches = await monitor.watches
+        outlooks = await monitor.outlooks
+        afds = await monitor.afds
         sourceStatus = await monitor.status
         pointInfo = await monitor.pointInfo
+    }
+
+    /// Downloads SPC products and AFDs now (for the Products tab). New items are only spoken while monitoring.
+    func refreshProducts() async {
+        guard !productsLoading else { return }
+        productsLoading = true
+        defer { productsLoading = false }
+        if let loc = location.location ?? (monitoring ? nil : pendingLocation) {
+            let anns = await monitor.updateLocation(GeoPoint(lat: loc.coordinate.latitude, lon: loc.coordinate.longitude), now: Date())
+            if monitoring { deliver(anns) }
+        } else if !monitoring {
+            location.requestPermission()
+            location.requestOnce()
+        }
+        let spc = await monitor.pollSPC(now: Date())
+        let afd = await monitor.pollAFD(now: Date())
+        if monitoring { deliver(spc + afd) }
+        lastPoll["spc"] = Date()
+        lastPoll["afd"] = Date()
+        productsUpdated = Date()
+        await refreshSnapshots()
     }
 
     /// Force all feeds to refresh on the next tick.
@@ -215,6 +248,9 @@ final class AppModel: ObservableObject {
     }
 
     private func locationChanged(_ loc: CLLocation) {
+        if !monitoring && selectedTab == .products && afds.isEmpty && !productsLoading {
+            Task { await refreshProducts() }
+        }
         guard profile.location.mode == .gps || profile.location.fixedPoint == nil else { return }
         if let last = lastLocationSent, loc.distance(from: last) < 150 { return }
         lastLocationSent = loc

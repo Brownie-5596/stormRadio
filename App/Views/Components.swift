@@ -13,7 +13,7 @@ struct ModePicker: View {
     }
 }
 
-/// Picker for a tone with a play button.
+/// Picker for a tone (built-in or one of your sound files) with a play button.
 struct TonePicker: View {
     @EnvironmentObject var model: AppModel
     var title = "Sound"
@@ -22,7 +22,14 @@ struct TonePicker: View {
     var body: some View {
         HStack {
             Picker(title, selection: $tone) {
-                ForEach(ToneID.allCases, id: \.self) { t in Text(t.label).tag(t) }
+                ForEach(ToneID.builtIn, id: \.self) { t in Text(t.label).tag(t) }
+                if !model.sounds.sounds.isEmpty || tone.isCustom {
+                    Divider()
+                    ForEach(model.sounds.sounds) { s in Text("♪ \(s.name)").tag(s.tone) }
+                    if tone.isCustom && !model.sounds.sounds.contains(where: { $0.tone == tone }) {
+                        Text("♪ \(tone.label) (missing)").tag(tone)
+                    }
+                }
             }
             Button {
                 model.speech.preview(tone: tone)

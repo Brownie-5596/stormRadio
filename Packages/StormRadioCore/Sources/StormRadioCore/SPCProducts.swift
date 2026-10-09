@@ -1,5 +1,13 @@
 import Foundation
 
+enum SPCLinks {
+    static func year(_ d: Date) -> Int {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal.component(.year, from: d)
+    }
+}
+
 /// Shared text helpers for NWS/SPC text products.
 public enum ProductText {
     /// Value following "Label..." up to the next blank line, unwrapped.
@@ -65,6 +73,11 @@ public struct MesoscaleDiscussion: Codable, Hashable, Identifiable, Sendable {
 
     public var shape: GeoShape? { polygon.count >= 3 ? GeoShape(ring: polygon) : nil }
 
+    /// SPC's graphic for this MD.
+    public var imageURL: URL? {
+        URL(string: "https://www.spc.noaa.gov/products/md/\(SPCLinks.year(issued))/mcd\(String(format: "%04d", number)).png")
+    }
+
     public static func parse(_ text: String, id: String, issued: Date) -> MesoscaleDiscussion? {
         guard let r = text.range(of: "Mesoscale Discussion ", options: .caseInsensitive) else { return nil }
         let numStr = text[r.upperBound...].prefix(while: { $0.isNumber })
@@ -123,6 +136,11 @@ public struct SPCWatch: Codable, Hashable, Identifiable, Sendable {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         return URL(string: "https://www.spc.noaa.gov/products/watch/\(cal.component(.year, from: issued))/ww\(String(format: "%04d", number)).html")
+    }
+
+    /// SPC's watch map with radar.
+    public var imageURL: URL? {
+        URL(string: "https://www.spc.noaa.gov/products/watch/\(SPCLinks.year(issued))/ww\(String(format: "%04d", number))_radar_big.gif")
     }
 
     public static func parse(_ text: String, id: String, issued: Date) -> SPCWatch? {
@@ -196,6 +214,18 @@ public struct OutlookSummary: Codable, Hashable, Identifiable, Sendable {
     public var mySevere: String?
 
     public var link: URL? { URL(string: "https://www.spc.noaa.gov/products/outlook/day\(day)otlk.html") }
+
+    /// SPC's current outlook graphics for this day: (name, URL).
+    public var imageLinks: [(String, URL)] {
+        let base = "https://www.spc.noaa.gov/products/outlook/"
+        var names: [(String, String)] = [("Categorical", "day\(day)otlk.png")]
+        if day <= 2 {
+            names += [("Tornado", "day\(day)probotlk_torn.png"), ("Wind", "day\(day)probotlk_wind.png"), ("Hail", "day\(day)probotlk_hail.png")]
+        } else if day == 3 {
+            names.append(("Severe probability", "day3prob.png"))
+        }
+        return names.compactMap { n in URL(string: base + n.1).map { (n.0, $0) } }
+    }
 
     public static func parse(_ text: String, day: Int, id: String, issued: Date) -> OutlookSummary {
         let paras = text.components(separatedBy: "\n\n")

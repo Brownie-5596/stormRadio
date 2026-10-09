@@ -25,6 +25,9 @@ struct ContentView: View {
             FeedView()
                 .tabItem { Label("Feed", systemImage: "list.bullet.rectangle") }
                 .tag(AppModel.Tab.feed)
+            ProductsView()
+                .tabItem { Label("Products", systemImage: "doc.text.magnifyingglass") }
+                .tag(AppModel.Tab.products)
             MapScreen()
                 .tabItem { Label("Map", systemImage: "map") }
                 .tag(AppModel.Tab.map)

@@ -11,7 +11,18 @@ final class SpeechCenter: NSObject, ObservableObject {
     @Published private(set) var lastSpoken: Announcement?
     @Published private(set) var history: [Announcement] = []
 
-    var voice = VoiceSettings()
+    var voice = VoiceSettings() { didSet { tones.customMaxSeconds = voice.customSoundMaxSeconds } }
+
+    /// While reading a product with "tap a word to start", which text is being read and which word (offsets in that text).
+    @Published private(set) var readingSourceID: String?
+    @Published private(set) var readingHighlight: NSRange?
+
+    private struct ReadingContext {
+        var sourceID: String
+        var baseOffset: Int
+    }
+    private var contexts: [String: ReadingContext] = [:]
+    private var spokenLocation = 0
     var interrupts = InterruptSettings()
     var keepAlive = false { didSet { updateIdleAudio() } }
 
@@ -53,6 +64,30 @@ final class SpeechCenter: NSObject, ObservableObject {
         playNext()
     }
 
+    /// Reads `text` starting at a UTF-16 offset (from tapping a word), highlighting words as they're spoken.
+    func read(text: String, from offset: Int, sourceID: String, title: String) {
+        let ns = text as NSString
+        let start = max(0, min(offset, ns.length))
+        let spoken = Self.speakable(ns.substring(from: start))
+        guard !spoken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Tapping a new spot in the same text replaces that reading instead of queueing it.
+        queue.removeAll { contexts[$0.id]?.sourceID == sourceID }
+        if let cur = current, contexts[cur.id]?.sourceID == sourceID { interruptCurrent(requeue: false) }
+        let a = Announcement(date: Date(), category: .system, title: title, spokenText: spoken, mode: .speak, priority: 5, notify: false)
+        contexts[a.id] = ReadingContext(sourceID: sourceID, baseOffset: start)
+        speakNow(a)
+    }
+
+    /// Makes product text read smoothly without changing its length (so highlights line up).
+    static func speakable(_ s: String) -> String {
+        s.replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "...", with: ",  ")
+            .replacingOccurrences(of: "&&", with: "  ")
+            .replacingOccurrences(of: "$$", with: "  ")
+    }
+
+    func isReading(_ sourceID: String) -> Bool { readingSourceID == sourceID && current != nil }
+
     func repeatLast() {
         guard let last = lastSpoken else {
             speakNow(Announcement(date: Date(), category: .system, title: "Nothing to repeat", spokenText: "Nothing has been read yet.", notify: false))
@@ -66,6 +101,7 @@ final class SpeechCenter: NSObject, ObservableObject {
 
     /// Stops talking and clears the queue.
     func stopAll() {
+        for a in queue { contexts[a.id] = nil }
         queue.removeAll()
         interruptCurrent(requeue: false)
         scheduleDeactivate()
@@ -95,12 +131,31 @@ final class SpeechCenter: NSObject, ObservableObject {
     private func interruptCurrent(requeue: Bool) {
         gapTask?.cancel()
         tones.stop()
-        if let cur = current {
+        if var cur = current {
+            let wasSpeaking = currentUtterance != nil
             current = nil
             currentUtterance = nil
             synth.stopSpeaking(at: .immediate)
-            if requeue { queue.insert(cur, at: 0) }
+            if requeue {
+                // Long readings resume where they were cut off; short alerts start over.
+                let ns = cur.spokenText as NSString
+                if wasSpeaking, spokenLocation > 0, spokenLocation < ns.length, contexts[cur.id] != nil || ns.length > 400 {
+                    cur.spokenText = ns.substring(from: spokenLocation)
+                    cur.mode = .speak
+                    contexts[cur.id]?.baseOffset += spokenLocation
+                }
+                queue.insert(cur, at: 0)
+            } else {
+                contexts[cur.id] = nil
+            }
+            clearReading()
         }
+        spokenLocation = 0
+    }
+
+    private func clearReading() {
+        readingSourceID = nil
+        readingHighlight = nil
     }
 
     private func playNext() {
@@ -124,6 +179,8 @@ final class SpeechCenter: NSObject, ObservableObject {
     }
 
     private func speak(_ a: Announcement) {
+        spokenLocation = 0
+        if let ctx = contexts[a.id] { readingSourceID = ctx.sourceID } else { clearReading() }
         let u = AVSpeechUtterance(string: a.spokenText)
         u.rate = Float(max(AVSpeechUtteranceMinimumSpeechRate, min(AVSpeechUtteranceMaximumSpeechRate, Float(voice.rate))))
         u.pitchMultiplier = Float(max(0.5, min(2.0, voice.pitch)))
@@ -143,7 +200,18 @@ final class SpeechCenter: NSObject, ObservableObject {
         finishCurrent(spoken: true)
     }
 
+    fileprivate func willSpeak(_ range: NSRange, of u: AVSpeechUtterance) {
+        guard u === currentUtterance, let cur = current else { return }
+        spokenLocation = range.location
+        if let ctx = contexts[cur.id] {
+            readingHighlight = NSRange(location: ctx.baseOffset + range.location, length: range.length)
+        }
+    }
+
     private func finishCurrent(spoken: Bool) {
+        if let cur = current { contexts[cur.id] = nil }
+        clearReading()
+        spokenLocation = 0
         if let cur = current {
             if spoken {
                 lastSpoken = cur
@@ -234,6 +302,11 @@ final class SpeechCenter: NSObject, ObservableObject {
 extension SpeechCenter: AVSpeechSynthesizerDelegate {
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         Task { @MainActor in self.utteranceFinished(utterance) }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, willSpeakRangeOfSpeechString characterRange: NSRange,
+                                       utterance: AVSpeechUtterance) {
+        Task { @MainActor in self.willSpeak(characterRange, of: utterance) }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {

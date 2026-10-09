@@ -47,6 +47,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="0.2.${GITHUB_RUN_NUMBER}" CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER}" \
             build 2>&1 | tee xcodebuild.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)|\*\* " || true
           grep -q "BUILD SUCCEEDED" xcodebuild.log
 
@@ -68,15 +69,32 @@ jobs:
           path: StormRadio.ipa
           retention-days: 30
 
-      - name: Publish to "latest-build" release
+      - name: Make AltStore / SideStore source
+        run: |
+          NOTES="$(git log -1 --format=%B | grep -v -E '^(Co-Authored-By|Claude-Session):' | sed '/^$/N;/^\n$/D')"
+          python3 tools/make_altstore_source.py --app Payload/StormRadio.app --ipa StormRadio.ipa \
+            --repo "${GITHUB_REPOSITORY}" --tag latest --notes "$NOTES" --out altstore-source.json
+          cp App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png icon.png
+
+      - name: Publish to the "latest" release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="latest-${GITHUB_REF_NAME//\//-}"
-          NOTES="Automatic build of ${GITHUB_REF_NAME} at ${GITHUB_SHA::7}. Download StormRadio.ipa and install it with Sideloadly."
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" StormRadio.ipa --clobber
-            gh release edit "$TAG" --notes "$NOTES"
+          set -e
+          VERSION="0.2.${GITHUB_RUN_NUMBER}"
+          NOTES="Storm Radio ${VERSION} (build ${GITHUB_RUN_NUMBER}) from ${GITHUB_REF_NAME} at ${GITHUB_SHA::7}.
+
+          Install StormRadio.ipa with Sideloadly (install over the old app to keep settings), or add this source to SideStore/AltStore for one-tap updates:
+          https://github.com/${GITHUB_REPOSITORY}/releases/download/latest/altstore-source.json"
+          # Keep the tag on the commit that was built.
+          git tag -f latest "${GITHUB_SHA}"
+          git push -f origin refs/tags/latest
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest StormRadio.ipa altstore-source.json icon.png --clobber
+            gh release edit latest --title "Storm Radio ${VERSION}" --notes "$NOTES" --prerelease
           else
-            gh release create "$TAG" StormRadio.ipa --prerelease --title "Storm Radio build (${GITHUB_REF_NAME})" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create latest StormRadio.ipa altstore-source.json icon.png --prerelease \
+              --title "Storm Radio ${VERSION}" --notes "$NOTES" --target "${GITHUB_SHA}"
           fi
+          # Older per-branch releases are replaced by "latest".
+          gh release delete "latest-${GITHUB_REF_NAME//\//-}" --cleanup-tag -y 2>/dev/null || true

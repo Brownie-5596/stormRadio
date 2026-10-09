@@ -24,21 +24,41 @@ public enum AnnounceMode: String, Codable, CaseIterable, Sendable {
     public var playsTone: Bool { self == .tone || self == .toneThenSpeak }
 }
 
-/// Built-in synthesized alert sounds.
-public enum ToneID: String, Codable, CaseIterable, Sendable {
-    case none
-    case eas            // EAS-style two-tone attention signal
-    case nwr1050        // NOAA Weather Radio 1050 Hz warning alarm tone
-    case siren          // rising/falling sweep
-    case alarm          // fast alternating hi/lo
-    case tripleBeep
-    case doubleBeep
-    case chimeUp
-    case chimeDown
-    case ping
-    case blip
+/// An alert sound: one of the built-in synthesized tones, or a custom audio file ("custom:<file name>").
+/// Stored in settings as a plain string, so older settings files keep working.
+public struct ToneID: RawRepresentable, Codable, Hashable, Sendable, CustomStringConvertible {
+    public var rawValue: String
+
+    public init(rawValue: String) { self.rawValue = rawValue }
+    public init(_ rawValue: String) { self.rawValue = rawValue }
+
+    public static let none = ToneID("none")
+    public static let eas = ToneID("eas")                 // EAS-style two-tone attention signal
+    public static let nwr1050 = ToneID("nwr1050")         // NOAA Weather Radio 1050 Hz warning alarm tone
+    public static let siren = ToneID("siren")             // rising/falling sweep
+    public static let alarm = ToneID("alarm")             // fast alternating hi/lo
+    public static let tripleBeep = ToneID("tripleBeep")
+    public static let doubleBeep = ToneID("doubleBeep")
+    public static let chimeUp = ToneID("chimeUp")
+    public static let chimeDown = ToneID("chimeDown")
+    public static let ping = ToneID("ping")
+    public static let blip = ToneID("blip")
+
+    /// The built-in tones, in menu order.
+    public static let builtIn: [ToneID] = [.none, .eas, .nwr1050, .siren, .alarm, .tripleBeep, .doubleBeep, .chimeUp, .chimeDown, .ping, .blip]
+    /// Same as `builtIn` (kept for older code).
+    public static var allCases: [ToneID] { builtIn }
+
+    public static let customPrefix = "custom:"
+
+    /// A custom sound file stored in the app's Sounds folder.
+    public static func custom(_ fileName: String) -> ToneID { ToneID(customPrefix + fileName) }
+
+    public var isCustom: Bool { rawValue.hasPrefix(Self.customPrefix) }
+    public var customFileName: String? { isCustom ? String(rawValue.dropFirst(Self.customPrefix.count)) : nil }
 
     public var label: String {
+        if let f = customFileName { return (f as NSString).deletingPathExtension }
         switch self {
         case .none: return "None"
         case .eas: return "EAS two-tone"
@@ -51,7 +71,19 @@ public enum ToneID: String, Codable, CaseIterable, Sendable {
         case .chimeDown: return "Chime down"
         case .ping: return "Ping"
         case .blip: return "Soft blip"
+        default: return rawValue
         }
+    }
+
+    public var description: String { rawValue }
+
+    public init(from decoder: Decoder) throws {
+        rawValue = try decoder.singleValueContainer().decode(String.self)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(rawValue)
     }
 }
 
@@ -543,9 +575,11 @@ public struct VoiceSettings: Codable, Hashable, Sendable {
     public var interruptSpokenAudio: Bool
     /// Seconds of silence between queued messages.
     public var gapSeconds: Double
+    /// Custom sound files are cut off after this many seconds.
+    public var customSoundMaxSeconds: Double
 
     public init(rate: Double = 0.52, pitch: Double = 1.0, volume: Double = 1.0, toneVolume: Double = 0.7, voiceIdentifier: String = "",
-                duckOtherAudio: Bool = true, interruptSpokenAudio: Bool = true, gapSeconds: Double = 0.6) {
+                duckOtherAudio: Bool = true, interruptSpokenAudio: Bool = true, gapSeconds: Double = 0.6, customSoundMaxSeconds: Double = 10) {
         self.rate = rate
         self.pitch = pitch
         self.volume = volume
@@ -554,6 +588,7 @@ public struct VoiceSettings: Codable, Hashable, Sendable {
         self.duckOtherAudio = duckOtherAudio
         self.interruptSpokenAudio = interruptSpokenAudio
         self.gapSeconds = gapSeconds
+        self.customSoundMaxSeconds = customSoundMaxSeconds
     }
 }
 

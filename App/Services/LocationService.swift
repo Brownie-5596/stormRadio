@@ -36,6 +36,12 @@ final class LocationService: NSObject, ObservableObject {
         if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization() }
     }
 
+    /// One location fix without starting continuous updates (used when not monitoring).
+    func requestOnce() {
+        guard manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse else { return }
+        manager.requestLocation()
+    }
+
     func requestAlways() {
         manager.requestAlwaysAuthorization()
     }

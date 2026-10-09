@@ -122,7 +122,7 @@ const LABELS = {
   // afd
   includeLocalOffice: "My local NWS office", extraOffices: "Other offices (e.g. OUN, ICT)", readSectionsOnIssue: "Sections read when issued", readSectionsOnDemand: "Sections read with the AFD button",
   // voice
-  rate: "Speed (0.3 – 0.65)", pitch: "Pitch (0.6 – 1.6)", volume: "Voice volume (0–1)", toneVolume: "Tone volume (0–1)", voiceIdentifier: "Voice identifier (blank = default)", duckOtherAudio: "Lower music while speaking", interruptSpokenAudio: "Pause podcasts / navigation", gapSeconds: "Pause between messages (s)",
+  rate: "Speed (0.3 – 0.65)", pitch: "Pitch (0.6 – 1.6)", volume: "Voice volume (0–1)", toneVolume: "Tone volume (0–1)", voiceIdentifier: "Voice identifier (blank = default)", duckOtherAudio: "Lower music while speaking", interruptSpokenAudio: "Pause podcasts / navigation", gapSeconds: "Pause between messages (s)", customSoundMaxSeconds: "Cut custom sounds off after (s)",
   // interrupts
   minimumPriority: "Minimum priority to interrupt", minimumGap: "Must be higher by", resumeInterrupted: "Re-read interrupted message", pdsBoost: "PDS priority boost", emergencyAlwaysTop: "Emergencies always priority 10", destructiveBoost: "Destructive boost", considerableBoost: "Considerable boost", observedTornadoBoost: "Observed tornado boost",
   // general
@@ -173,6 +173,10 @@ function setStatus(text, kind = "") { const s = $("status"); s.textContent = tex
 function selectFor(kind, value, onchange) {
   const s = el("select", { onchange: (e) => onchange(e.target.value) });
   for (const [v, t] of ENUMS[kind]) s.append(el("option", { value: v }, t));
+  if (value != null && !ENUMS[kind].some(([v]) => v === value)) {
+    // Custom sound files ("custom:Name.m4a") are picked in the app; keep them as they are.
+    s.append(el("option", { value }, String(value).startsWith("custom:") ? "♪ " + String(value).slice(7) + " (your sound)" : String(value)));
+  }
   s.value = value;
   return s;
 }

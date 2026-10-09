@@ -14,8 +14,10 @@ AFDs and storm reports aloud, filtered by a per-profile configuration. See READM
     produces `Announcement`s. `process(alerts:now:)` / `process(reports:now:)` are network-free entry points for tests.
   - `Settings.swift`, `ProductCatalog.swift` (default rules + built-in profiles), `SettingsIO.swift` (lenient import: deep-merge onto defaults).
   - `StormReports.swift` (IEM LSR GeoJSON, SpotterNetwork placefile, mPING), `SPCProducts.swift` (MD, SEL watch, outlook text + GeoJSON, AFD).
-  - `ToneSynth.swift` — tones generated as PCM (no audio files).
-- `App/` — SwiftUI app (iOS 17+). `AppModel` (@MainActor) owns the monitor loop, `SpeechCenter` (priority queue, interrupts,
+  - `ToneSynth.swift` — built-in tones generated as PCM. `ToneID` is string-backed; `custom:<file>` = user sound in Documents/Sounds
+    (played by the app's `TonePlayer` via AVAudioPlayer, falls back to double beep if missing).
+- `App/` — SwiftUI app (iOS 17+). Tabs: Radio, Feed, Products (MD/watch/outlook/AFD/report browser), Map, Settings.
+  `ReadableText` = tap-a-word-to-read text with spoken-word highlight (SpeechCenter.read / readingHighlight). `AppModel` (@MainActor) owns the monitor loop, `SpeechCenter` (priority queue, interrupts,
   AVSpeechSynthesizer, audio session ducking), `TonePlayer` (AVAudioEngine + silent keep-alive), `LocationService`, `NotificationService`, `Storage`.
 - `project.yml` — XcodeGen; `.xcodeproj` is generated and git-ignored.
 - `tools/settings-editor.src.html` → `tools/settings-editor.html` via `tools/build_settings_editor.py <defaults.json>` (embeds defaults).
@@ -27,6 +29,9 @@ AFDs and storm reports aloud, filtered by a per-profile configuration. See READM
   `xcodegen generate`, unsigned `xcodebuild`, zips `Payload/` → `StormRadio.ipa`, uploads artifact and updates the
   `latest-<branch>` pre-release. Compile errors are printed by the "Show compile errors" step.
 - App target uses Swift 5 language mode (minimal concurrency checking).
+- Each CI build gets version `0.2.<run number>` / build `<run number>` and is published to the fixed `latest` release
+  (`StormRadio.ipa`, `altstore-source.json` made by `tools/make_altstore_source.py`, `icon.png`). The app's `UpdateChecker`
+  reads that source file to show "update available".
 
 ## Conventions / gotchas
 - Settings are Codable with no per-field defaults in decoding; **always go through `SettingsIO.decode`** (it merges onto defaults).

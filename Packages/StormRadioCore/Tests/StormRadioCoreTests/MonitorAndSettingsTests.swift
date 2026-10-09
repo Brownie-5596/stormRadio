@@ -103,6 +103,36 @@ final class MonitorAndSettingsTests: XCTestCase {
         XCTAssertEqual(later.filter { $0.category == .path }.count, 1, "\(later.map { $0.spokenText })")
     }
 
+    /// Driving into a storm's path when it's already under 5 minutes away still gives one alert with the real ETA.
+    func testEnteringPathWithUnderFiveMinutes() async {
+        let now = date("2026-05-06T23:40:00Z")
+        var s = AppSettings.defaults
+        var prof = s.activeProfile
+        prof.location.mode = .gps
+        prof.startupSummary = false
+        s.activeProfile = prof
+        let m = StormMonitor(settings: s)
+        await m.setTimeZone(TimeZone(identifier: "UTC")!)
+        // Start well off to the side of the track.
+        let track = GeoPoint(lat: 35.2, lon: -97.0)
+        _ = await m.updateLocation(Geo.destination(from: track, bearingDegrees: 0, miles: 15), now: now)
+        _ = await m.process(alerts: [], now: now)
+        var a = makeAlert(event: "Tornado Warning", sent: now, minutes: 45)
+        a.tornadoDetection = .radarIndicated
+        // Storm 3 miles west of the track point, moving east at 45 mph -> ~4 minutes out.
+        a.motion = StormMotion(time: now, fromDegrees: 270, speedKnots: 39, points: [Geo.destination(from: track, bearingDegrees: 270, miles: 3)])
+        let issued = await m.process(alerts: [a], now: now.addingTimeInterval(1))
+        XCTAssertTrue(issued.filter { $0.category == .path }.isEmpty, "not in the path yet")
+        // Drive onto the track.
+        let entered = await m.updateLocation(track, now: now.addingTimeInterval(2))
+        let path = entered.filter { $0.category == .path }
+        XCTAssertEqual(path.count, 1, "\(entered.map { $0.spokenText })")
+        XCTAssertTrue(path.first?.spokenText.contains("Arrival in about 4 minutes") ?? false, path.first?.spokenText ?? "")
+        // No repeat a few seconds later.
+        let again = await m.updateLocation(GeoPoint(lat: 35.2005, lon: -97.0), now: now.addingTimeInterval(20))
+        XCTAssertTrue(again.filter { $0.category == .path }.isEmpty)
+    }
+
     func testFirstGPSFixGivesSummaryNotABurst() async {
         let now = date("2026-05-06T23:40:00Z")
         var s = AppSettings.defaults
@@ -159,6 +189,25 @@ final class MonitorAndSettingsTests: XCTestCase {
         XCTAssertEqual(imported.activeProfile.name, "My Custom")
         let merged = SettingsIO.mergeProfiles(from: imported, into: .defaults)
         XCTAssertEqual(merged.profiles.count, AppSettings.defaults.profiles.count + 1)
+    }
+
+    func testCustomToneRoundTrip() throws {
+        var s = AppSettings.defaults
+        s.profiles[0].alertRules["Tornado Warning"]?.tone = .custom("My Siren.m4a")
+        let back = try SettingsIO.decode(try SettingsIO.encode(s))
+        let tone = back.profiles[0].alertRules["Tornado Warning"]?.tone
+        XCTAssertEqual(tone, .custom("My Siren.m4a"))
+        XCTAssertEqual(tone?.isCustom, true)
+        XCTAssertEqual(tone?.label, "My Siren")
+        XCTAssertTrue(String(decoding: try SettingsIO.encode(s), as: UTF8.self).contains(#""tone" : "custom:My Siren.m4a""#))
+    }
+
+    func testSPCImageLinks() throws {
+        let md = try XCTUnwrap(MesoscaleDiscussion.parse(try Fixture.text("mcd.txt"), id: "x", issued: date("2026-10-06T19:04:00Z")))
+        XCTAssertEqual(md.imageURL?.absoluteString, "https://www.spc.noaa.gov/products/md/2026/mcd2346.png")
+        XCTAssertEqual(md.link?.absoluteString, "https://www.spc.noaa.gov/products/md/2026/md2346.html")
+        let o = OutlookSummary.parse(try Fixture.text("swody1.txt"), day: 1, id: "x", issued: Date())
+        XCTAssertEqual(o.imageLinks.count, 4)
     }
 
     func testBadFileGivesError() {
